@@ -4,13 +4,14 @@
 #define WIDTH 800
 #define HEIGHT 600
 
-void drawPixels( SDL_Renderer* rd, const std::array<std::array<bool, WIDTH+2>, HEIGHT+2>* a, const int size = 20 )
+template<std::size_t w, std::size_t h>
+void drawPixels( SDL_Renderer* rd, const std::array<std::array<bool, w>, h>* a, const int size = 20 )
 {
   
 
-  for ( int i = 1 ; i < HEIGHT+1 ; i++ )
+  for ( std::size_t i = 1 ; i < h-1 ; i++ )
   {
-    for ( int j = 1 ; j < WIDTH+1 ; j++ )
+    for ( std::size_t j = 1 ; j < w-1 ; j++ )
     {
       if ( (*a).at(i).at(j) )
       {
@@ -26,16 +27,18 @@ void drawPixels( SDL_Renderer* rd, const std::array<std::array<bool, WIDTH+2>, H
   }
 }
 
-int numberNeighbours( const std::array<std::array<bool, WIDTH+2>, HEIGHT+2>* a, const int i, const int j )
+template<std::size_t w, std::size_t h>
+int numberNeighbours( const std::array<std::array<bool, w>, h>* a, const int i, const int j )
 {
   return (*a).at(i-1).at(j-1) + (*a).at(i-1).at(j) + (*a).at(i-1).at(j+1) + (*a).at(i).at(j-1) + (*a).at(i).at(j+1) + (*a).at(i+1).at(j-1) + (*a).at(i+1).at(j) + (*a).at(i+1).at(j+1) ;
 }
 
-void update( std::array<std::array<bool, WIDTH+2>, HEIGHT+2>* a )
+template<std::size_t w, std::size_t h>
+void update( std::array<std::array<bool, w>, h>* a )
 {
-  for ( int i = 1 ; i < HEIGHT+1 ; i++ )
+  for ( std::size_t i = 1 ; i < h-1 ; i++ )
   {
-    for ( int j = 1 ; j < WIDTH+1 ; j++ )
+    for ( std::size_t j = 1 ; j < w-1 ; j++ )
     {
       int n = numberNeighbours(a, i, j) ;
       if ( (*a).at(i).at(j) )
@@ -60,10 +63,11 @@ int main(int argc, char const **argv)
   SDL_SetRenderDrawColor(rd, 255, 255, 255, 255) ;
   SDL_RenderClear(rd) ;
 
-  std::array<std::array<bool, WIDTH+2>, HEIGHT+2> a ;
-  for ( int i = 0 ; i < HEIGHT+2 ; i++ )
+  const std::size_t n = 10 ;
+  std::array<std::array<bool, n+2>, n+2> a ;
+  for ( std::size_t i = 0 ; i < n+2 ; i++ )
   {
-    for ( int j = 0 ; j < WIDTH+2 ; j++ )
+    for ( std::size_t j = 0 ; j < n+2 ; j++ )
     {
       a[i][j] = false ;
     }
@@ -76,10 +80,9 @@ int main(int argc, char const **argv)
     while ( SDL_PollEvent(&evt) )
     {
       if ( evt.type == SDL_QUIT ) quit = true ;
-
-      update(&a) ;
-      drawPixels(rd, &a) ;
     }
+    drawPixels(rd, &a) ;
+    update(&a) ;
 
     SDL_RenderPresent(rd) ;
   }
