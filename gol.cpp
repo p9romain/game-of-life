@@ -14,13 +14,11 @@
 template<std::size_t w, std::size_t h>
 void drawPixels( SDL_Renderer* rd, const std::array<std::array<bool, w>, h>* a, const int size = P_SIZE )
 {
-  
-
-  for ( std::size_t i = 0 ; i < h ; i++ )
+  for ( std::size_t i = 0 ; i < h/3 + 1 ; i++ )
   {
-    for ( std::size_t j = 0 ; j < w ; j++ )
+    for ( std::size_t j = 0 ; j < w/3 + 1 ; j++ )
     {
-      if ( (*a).at(i).at(j) )
+      if ( (*a).at(i+h/3).at(j+w/3) )
       {
         SDL_SetRenderDrawColor(rd, 0, 0, 0, 255) ;
         SDL_Rect rect = { int(j-1)*size, int(i-1)*size, size, size } ;
@@ -28,7 +26,7 @@ void drawPixels( SDL_Renderer* rd, const std::array<std::array<bool, w>, h>* a, 
       }
       else if ( (i+j)%2 == 0 or (i-j)%2 == 0 )
       {
-        SDL_SetRenderDrawColor(rd, 245, 245, 245, 120) ;
+        SDL_SetRenderDrawColor(rd, 240, 240, 240, 120) ;
         SDL_Rect rect = { int(j-1)*size, int(i-1)*size, size, size } ;
         SDL_RenderFillRect(rd, &rect) ;
       }
@@ -90,6 +88,18 @@ std::array<std::array<bool, w>, h> update( const std::array<std::array<bool, w>,
 
 
 template<std::size_t w, std::size_t h>
+void init(std::array<std::array<bool, w>, h>* a)
+{
+  for ( std::size_t i = 0 ; i < h ; i++ )
+  {
+    for ( std::size_t j = 0 ; j < w ; j++ )
+    {
+      (*a)[i][j] = false ;
+    }
+  }
+}
+
+template<std::size_t w, std::size_t h>
 bool isEmpty(std::array<std::array<bool, w>, h>* a)
 {
   for ( std::size_t i = 0 ; i < h ; i++ )
@@ -111,16 +121,11 @@ int main(int argc, char const **argv)
   SDL_Window* wnd = SDL_CreateWindow("Game of Life", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, SDL_WINDOW_RESIZABLE) ;
   SDL_Renderer* rd = SDL_CreateRenderer(wnd, -1, 0) ;
 
-  std::array<std::array<bool, GRID_W>, GRID_H> a ;
-  for ( std::size_t i = 0 ; i < GRID_H ; i++ )
-  {
-    for ( std::size_t j = 0 ; j < GRID_W ; j++ )
-    {
-      a[i][j] = false ;
-    }
-  }
+  std::array<std::array<bool, 3*GRID_W>, 3*GRID_H> a ;
+  init(&a) ;
 
   int x, y ;
+  bool hold = false ;
   bool start = false ;
   bool quit = false ;
   while ( not quit )
@@ -134,13 +139,21 @@ int main(int argc, char const **argv)
     while ( SDL_PollEvent(&evt) )
     {
       if ( evt.type == SDL_QUIT ) quit = true ;
-      else if ( evt.type == SDL_KEYDOWN ) start = true ;
+      else if ( evt.type == SDL_KEYDOWN ) 
+      {
+        if ( evt.key.keysym.sym == SDLK_r or evt.key.keysym.sym == SDLK_F2 )
+        {
+          init(&a) ;
+          start = false ;
+        }
+        else start = true ;
+      }
       else if ( not start and evt.type == SDL_MOUSEBUTTONDOWN )
       {
-        if ( evt.button.button == SDL_BUTTON_LEFT ) 
+        if ( evt.button.button == SDL_BUTTON_LEFT )
         {
-          x = evt.button.y/float(P_SIZE)+1 ;
-          y = evt.button.x/float(P_SIZE)+1 ;
+          x = GRID_H + evt.button.y/float(P_SIZE) ;
+          y = GRID_W + evt.button.x/float(P_SIZE) ;
           a[x][y] = not a[x][y] ;
         }
       }
