@@ -1,13 +1,13 @@
 #include <array>
-#include <iostream>
 #include "SDL2/SDL.h"
 
-#define WIDTH 800
-#define HEIGHT 600
+#define WIDTH 1080
+#define HEIGHT 720
+#define DELAY 50
 
-#define P_SIZE 30
-#define GRID_W int( float(WIDTH) / float(P_SIZE) )
-#define GRID_H int( float(HEIGHT) / float(P_SIZE) )
+#define P_SIZE 20
+#define GRID_W int( float(WIDTH) / float(P_SIZE) ) + 1
+#define GRID_H int( float(HEIGHT) / float(P_SIZE) ) + 1
 
 
 
@@ -26,9 +26,17 @@ void drawPixels( SDL_Renderer* rd, const std::array<std::array<bool, w>, h>* a, 
         SDL_Rect rect = { int(j-1)*size, int(i-1)*size, size, size } ;
         SDL_RenderFillRect(rd, &rect) ;
       }
+      else if ( (i+j)%2 == 0 or (i-j)%2 == 0 )
+      {
+        SDL_SetRenderDrawColor(rd, 245, 245, 245, 120) ;
+        SDL_Rect rect = { int(j-1)*size, int(i-1)*size, size, size } ;
+        SDL_RenderFillRect(rd, &rect) ;
+      }
     }
   }
 }
+
+
 
 template<std::size_t w, std::size_t h>
 bool validNeighbour( const std::array<std::array<bool, w>, h>* a, const int i, const int j )
@@ -81,32 +89,18 @@ std::array<std::array<bool, w>, h> update( const std::array<std::array<bool, w>,
 
 
 
-// template<std::size_t w, std::size_t h>
-// std::ostream& operator<<(std::ostream& out, std::array<std::array<bool, w>, h>& a)
-// {
-//   for ( std::size_t i = 0 ; i < h ; i++ )
-//   {
-//     for ( std::size_t j = 0 ; j < w ; j++ )
-//     {
-//       out << a.at(i).at(j) << " " ;
-//     }
-//     out << std::endl ;
-//   }
-//   return out ;
-// }
-
-
-
-// template<std::size_t N>
-// std::ostream& operator<<(std::ostream& out, std::array<bool, N>& a)
-// {
-//   for ( std::size_t i = 0 ; i < N ; i++ )
-//   {
-//     out << a.at(i) << " " ;
-//   }
-//   out << std::endl ;
-//   return out ;
-// }
+template<std::size_t w, std::size_t h>
+bool isEmpty(std::array<std::array<bool, w>, h>* a)
+{
+  for ( std::size_t i = 0 ; i < h ; i++ )
+  {
+    for ( std::size_t j = 0 ; j < w ; j++ )
+    {
+      if ( (*a).at(i).at(j) ) return false ;
+    }
+  }
+  return true ;
+}
 
 
 
@@ -127,9 +121,12 @@ int main(int argc, char const **argv)
   }
 
   int x, y ;
+  bool start = false ;
   bool quit = false ;
   while ( not quit )
   {
+    if ( isEmpty(&a) ) start = false ;
+
     SDL_SetRenderDrawColor(rd, 255, 255, 255, 255) ;
     SDL_RenderClear(rd) ;
 
@@ -137,7 +134,8 @@ int main(int argc, char const **argv)
     while ( SDL_PollEvent(&evt) )
     {
       if ( evt.type == SDL_QUIT ) quit = true ;
-      else if ( evt.type == SDL_MOUSEBUTTONDOWN )
+      else if ( evt.type == SDL_KEYDOWN ) start = true ;
+      else if ( not start and evt.type == SDL_MOUSEBUTTONDOWN )
       {
         if ( evt.button.button == SDL_BUTTON_LEFT ) 
         {
@@ -149,9 +147,12 @@ int main(int argc, char const **argv)
     }
 
     drawPixels(rd, &a) ;
-    a = update(&a) ;
 
-    SDL_Delay(1000) ;
+    if ( start )
+    {
+      a = update(&a) ;
+      SDL_Delay(DELAY) ;
+    }
 
     SDL_RenderPresent(rd) ;
   }
