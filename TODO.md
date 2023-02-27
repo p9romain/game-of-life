@@ -2,7 +2,7 @@
 - [X] Working Game
 - [X] Custom Start (any key to launch)
 - [X] Reset button (R or F2)
-- [ ] Draw while holding click
+- [X] Draw while holding click
 - [ ] Exec file for Windows and Linux
 
 # Bonus

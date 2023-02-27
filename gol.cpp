@@ -1,15 +1,7 @@
 #include <array>
-#include "SDL2/SDL.h"
+#include <SDL2/SDL.h>
 
-#define WIDTH 1080
-#define HEIGHT 720
-#define DELAY 50
-
-#define P_SIZE 20
-#define GRID_W int( float(WIDTH) / float(P_SIZE) ) + 1
-#define GRID_H int( float(HEIGHT) / float(P_SIZE) ) + 1
-
-
+#include "params.hpp"
 
 template<std::size_t w, std::size_t h>
 void drawPixels( SDL_Renderer* rd, const std::array<std::array<bool, w>, h>* a, const int size = P_SIZE )
@@ -114,7 +106,7 @@ bool isEmpty(std::array<std::array<bool, w>, h>* a)
 
 
 
-int main(int argc, char const **argv)
+int main(int argc, char **argv)
 {
   SDL_Init(SDL_INIT_VIDEO) ;
 
@@ -125,9 +117,13 @@ int main(int argc, char const **argv)
   init(&a) ;
 
   int x, y ;
+  int old_x = -1 ;
+  int old_y = -1 ;
+
   bool hold = false ;
   bool start = false ;
   bool quit = false ;
+
   while ( not quit )
   {
     if ( isEmpty(&a) ) start = false ;
@@ -148,14 +144,22 @@ int main(int argc, char const **argv)
         }
         else start = true ;
       }
-      else if ( not start and evt.type == SDL_MOUSEBUTTONDOWN )
+      else if ( evt.type == SDL_MOUSEBUTTONDOWN ) hold = true ;
+      else if ( evt.type == SDL_MOUSEBUTTONUP ) 
       {
-        if ( evt.button.button == SDL_BUTTON_LEFT )
-        {
-          x = GRID_H + evt.button.y/float(P_SIZE) ;
-          y = GRID_W + evt.button.x/float(P_SIZE) ;
-          a[x][y] = not a[x][y] ;
-        }
+        hold = false ;
+        old_x = -1 ;
+        old_y = -1 ;
+      }
+
+
+      if ( not start and hold and evt.button.button == SDL_BUTTON_LEFT )
+      {
+        x = int(GRID_H + evt.button.y/float(P_SIZE)) ;
+        y = int(GRID_W + evt.button.x/float(P_SIZE)) ;
+        if ( x != old_x or y != old_y ) a[x][y] = not a[x][y] ;
+        old_x = x ;
+        old_y = y ;
       }
     }
 
