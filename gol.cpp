@@ -118,7 +118,7 @@ int main(int argc, char const **argv)
 {
   SDL_Init(SDL_INIT_VIDEO) ;
 
-  SDL_Window* wnd = SDL_CreateWindow("Game of Life", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, SDL_WINDOW_RESIZABLE) ;
+  SDL_Window* wnd = SDL_CreateWindow("Game of Life", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, SDL_WINDOW_SHOWN) ;
   SDL_Renderer* rd = SDL_CreateRenderer(wnd, -1, 0) ;
 
   std::array<std::array<bool, 3*GRID_W>, 3*GRID_H> a ;
