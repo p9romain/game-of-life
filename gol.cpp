@@ -3,6 +3,8 @@
 
 #include "params.hpp"
 
+
+
 template<std::size_t w, std::size_t h>
 void drawPixels( SDL_Renderer* rd, const std::array<std::array<bool, w>, h>* a, const int size = P_SIZE )
 {
@@ -151,7 +153,6 @@ int main(int argc, char **argv)
         old_x = -1 ;
         old_y = -1 ;
       }
-
 
       if ( not start and hold and evt.button.button == SDL_BUTTON_LEFT )
       {
