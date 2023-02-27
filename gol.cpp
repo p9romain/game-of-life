@@ -6,7 +6,7 @@
 
 
 template<std::size_t w, std::size_t h>
-void drawPixels( SDL_Renderer* rd, const std::array<std::array<bool, w>, h>* a, const int size = P_SIZE )
+void drawPixels( SDL_Renderer* rd, const std::array<std::array<bool, w>, h>* a)
 {
   for ( std::size_t i = 0 ; i < h/3 + 1 ; i++ )
   {
@@ -14,14 +14,14 @@ void drawPixels( SDL_Renderer* rd, const std::array<std::array<bool, w>, h>* a, 
     {
       if ( (*a).at(i+h/3).at(j+w/3) )
       {
-        SDL_SetRenderDrawColor(rd, 0, 0, 0, 255) ;
-        SDL_Rect rect = { int(j-1)*size, int(i-1)*size, size, size } ;
+        SDL_SetRenderDrawColor(rd, P_COLOR_R, P_COLOR_G, P_COLOR_B, 255) ;
+        SDL_Rect rect = { int(j-1)*P_SIZE, int(i-1)*P_SIZE, P_SIZE, P_SIZE } ;
         SDL_RenderFillRect(rd, &rect) ;
       }
       else if ( (i+j)%2 == 0 or (i-j)%2 == 0 )
       {
-        SDL_SetRenderDrawColor(rd, 240, 240, 240, 120) ;
-        SDL_Rect rect = { int(j-1)*size, int(i-1)*size, size, size } ;
+        SDL_SetRenderDrawColor(rd, GRID_COLOR2_R, GRID_COLOR2_G, GRID_COLOR2_B, 255) ;
+        SDL_Rect rect = { int(j-1)*P_SIZE, int(i-1)*P_SIZE, P_SIZE, P_SIZE } ;
         SDL_RenderFillRect(rd, &rect) ;
       }
     }
@@ -130,7 +130,7 @@ int main(int argc, char **argv)
   {
     if ( isEmpty(&a) ) start = false ;
 
-    SDL_SetRenderDrawColor(rd, 255, 255, 255, 255) ;
+    SDL_SetRenderDrawColor(rd, GRID_COLOR1_R, GRID_COLOR1_G, GRID_COLOR1_B, 255) ;
     SDL_RenderClear(rd) ;
 
     SDL_Event evt ;
