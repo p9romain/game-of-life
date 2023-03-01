@@ -3,7 +3,7 @@
 - [X] Custom Start (any key to launch)
 - [X] Reset button (R or F2)
 - [X] Draw while holding click
-- [ ] Exec file for Windows and Linux
+- [ ] Exec file for Windows and Linux (with SDL2 in it)
 
 # Bonus
 - [ ] Resizable window (brrr)
