@@ -144,6 +144,7 @@ int main(int argc, char **argv)
           init(&a) ;
           start = false ;
         }
+        if ( evt.key.keysym.sym == SDLK_p or evt.key.keysym.sym == SDLK_ESCAPE ) start = not start ;
         else start = true ;
       }
       else if ( evt.type == SDL_MOUSEBUTTONDOWN ) hold = true ;
