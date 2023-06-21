@@ -1,4 +1,4 @@
-#include <array>
+#include <vector>
 #include <iostream>
 #include <SDL2/SDL.h>
 
@@ -6,14 +6,13 @@
 
 
 
-template<std::size_t w, std::size_t h>
-void drawPixels( SDL_Renderer* rd, const std::array<std::array<bool, w>, h>* a, int ox, int oy)
+void drawPixels( SDL_Renderer* rd, const std::vector<std::vector<bool>>* v, int ox, int oy)
 {
   for ( std::size_t i = ox ; i < ox + GRID_H ; i++ )
   {
     for ( std::size_t j = oy ; j < oy + GRID_W ; j++ )
     {
-      if ( (*a).at(i).at(j) )
+      if ( (*v).at(i).at(j) )
       {
         SDL_SetRenderDrawColor(rd, P_COLOR_R, P_COLOR_G, P_COLOR_B, 255) ;
         SDL_Rect rect = { int(j-oy-1)*P_SIZE, int(i-ox-1)*P_SIZE, P_SIZE, P_SIZE } ;
@@ -31,14 +30,12 @@ void drawPixels( SDL_Renderer* rd, const std::array<std::array<bool, w>, h>* a, 
 
 
 
-template<std::size_t w, std::size_t h>
-bool validNeighbour( const std::array<std::array<bool, w>, h>* a, const int i, const int j )
+bool validNeighbour( const std::vector<std::vector<bool>>* v, const int i, const int j )
 {
-  return not ( i < 0 or i >= int(h) or j < 0 or j >= int(w) ) ;
+  return not ( i < 0 or i >= SIZE*GRID_H or j < 0 or j >= SIZE*GRID_W ) ;
 }
 
-template<std::size_t w, std::size_t h>
-int numberNeighbours( const std::array<std::array<bool, w>, h>* a, const int x, const int y )
+int numberNeighbours( const std::vector<std::vector<bool>>* v, const int x, const int y )
 {
   int n = 0 ;
   for ( int i = x - 1 ; i < x + 2 ; i++ )
@@ -46,7 +43,7 @@ int numberNeighbours( const std::array<std::array<bool, w>, h>* a, const int x, 
     for ( int j = y - 1 ; j < y + 2 ; j++ )
     {
       if ( i == x and j == y ) continue ;
-      if ( validNeighbour(a, i, j) ) n += (*a).at(i).at(j) ;
+      if ( validNeighbour(v, i, j) ) n += (*v).at(i).at(j) ;
     }
   }
   return n ;
@@ -54,17 +51,16 @@ int numberNeighbours( const std::array<std::array<bool, w>, h>* a, const int x, 
 
 
 
-template<std::size_t w, std::size_t h>
-std::array<std::array<bool, w>, h> update( const std::array<std::array<bool, w>, h>* a )
+std::vector<std::vector<bool>> update( const std::vector<std::vector<bool>>* v )
 {
-  std::array<std::array<bool, w>, h> res = *a ;
+  std::vector<std::vector<bool>> res = *v ;
   bool b ;
-  for ( std::size_t i = 0 ; i < h ; i++ )
+  for ( std::size_t i = 0 ; i < SIZE*GRID_H ; i++ )
   {
-    for ( std::size_t j = 0 ; j < w ; j++ )
+    for ( std::size_t j = 0 ; j < SIZE*GRID_W ; j++ )
     {
-      int n = numberNeighbours(a, i, j) ;
-      if ( (*a).at(i).at(j) )
+      int n = numberNeighbours(v, i, j) ;
+      if ( (*v).at(i).at(j) )
       {
         if ( not ( n == 2 or n == 3 ) ) b = false ;
         else b = true ;
@@ -82,42 +78,39 @@ std::array<std::array<bool, w>, h> update( const std::array<std::array<bool, w>,
 
 
 
-template<std::size_t w, std::size_t h>
-void init(std::array<std::array<bool, w>, h>* a)
+void reset(std::vector<std::vector<bool>>* v)
 {
-  for ( std::size_t i = 0 ; i < h ; i++ )
+  for ( std::size_t i = 0 ; i < SIZE*GRID_H ; i++ )
   {
-    for ( std::size_t j = 0 ; j < w ; j++ )
+    for ( std::size_t j = 0 ; j < SIZE*GRID_W ; j++ )
     {
-      (*a)[i][j] = false ;
+      (*v)[i][j] = false ;
     }
   }
 }
 
-template<std::size_t w, std::size_t h>
-bool isEmpty(std::array<std::array<bool, w>, h>* a)
+bool isEmpty(std::vector<std::vector<bool>>* v)
 {
-  for ( std::size_t i = 0 ; i < h ; i++ )
+  for ( std::size_t i = 0 ; i < SIZE*GRID_H ; i++ )
   {
-    for ( std::size_t j = 0 ; j < w ; j++ )
+    for ( std::size_t j = 0 ; j < SIZE*GRID_W ; j++ )
     {
-      if ( (*a).at(i).at(j) ) return false ;
+      if ( (*v).at(i).at(j) ) return false ;
     }
   }
   return true ;
 }
 
-
-
 int main(int argc, char **argv)
 {
   SDL_Init(SDL_INIT_VIDEO) ;
 
-  SDL_Window* wnd = SDL_CreateWindow("Game of Life", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, SDL_WINDOW_SHOWN) ;
+  SDL_Window* wnd = SDL_CreateWindow("Game of Life", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, W_WIDTH, W_HEIGHT, SDL_WINDOW_SHOWN) ;
   SDL_Renderer* rd = SDL_CreateRenderer(wnd, -1, 0) ;
 
-  std::array<std::array<bool, SIZE*GRID_W>, SIZE*GRID_H> a ;
-  init(&a) ;
+  std::vector<std::vector<bool>> v(SIZE*GRID_H, std::vector<bool>(SIZE*GRID_W, false)) ;
+
+  P_SIZE *= 4 ;
 
   int ox = SIZE/2*GRID_H ;
   int oy = SIZE/2*GRID_W ;
@@ -137,7 +130,7 @@ int main(int argc, char **argv)
 
   while ( not quit )
   {
-    if ( isEmpty(&a) ) start = false ;
+    if ( isEmpty(&v) ) start = false ;
 
     SDL_SetRenderDrawColor(rd, GRID_COLOR1_R, GRID_COLOR1_G, GRID_COLOR1_B, 255) ;
     SDL_RenderClear(rd) ;
@@ -150,7 +143,7 @@ int main(int argc, char **argv)
       {
         if ( evt.key.keysym.sym == SDLK_r or evt.key.keysym.sym == SDLK_F2 or evt.key.keysym.sym == SDLK_BACKSPACE )
         {
-          init(&a) ;
+          reset(&v) ;
           start = false ;
         }
         if ( evt.key.keysym.sym == SDLK_p or evt.key.keysym.sym == SDLK_ESCAPE ) start = not start ;
@@ -175,12 +168,20 @@ int main(int argc, char **argv)
         old_x = -1 ;
         old_y = -1 ;
       }
+      else if ( evt.type == SDL_MOUSEWHEEL )
+      {
+        if ( evt.wheel.y > 0 and GRID_H > 5 ) P_SIZE++ ;
+        else if ( evt.wheel.y < 0 and P_SIZE > P_SIZE_MIN ) P_SIZE-- ;
+
+        GRID_W = int( float(W_WIDTH) / float(P_SIZE) ) + 1 ;
+        GRID_H = int( float(W_HEIGHT) / float(P_SIZE) ) + 1 ;
+      }
 
       if ( not start and hold_mouse and evt.button.button == SDL_BUTTON_LEFT )
       {
         x = int(ox + evt.button.y/float(P_SIZE)) + 1 ;
         y = int(oy + evt.button.x/float(P_SIZE)) + 1 ;
-        if ( x != old_x or y != old_y ) a[x][y] = not a[x][y] ;
+        if ( x != old_x or y != old_y ) v[x][y] = not v[x][y] ;
         old_x = x ;
         old_y = y ;
       }
@@ -191,11 +192,11 @@ int main(int argc, char **argv)
       if ( hold_right and oy < (SIZE-2)*GRID_W ) oy++ ;
     }
 
-    drawPixels(rd, &a, ox, oy) ;
+    drawPixels(rd, &v, ox, oy) ;
 
     if ( start )
     {
-      a = update(&a) ;
+      v = update(&v) ;
       SDL_Delay(DELAY) ;
     }
 

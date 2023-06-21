@@ -1,5 +1,9 @@
 #include "params.hpp"
 
+int P_SIZE = P_SIZE_MIN ;
+int GRID_W = int( float(W_WIDTH) / float(P_SIZE) ) + 1 ;
+int GRID_H = int( float(W_HEIGHT) / float(P_SIZE) ) + 1 ;
+
 int DELAY = 50 ;
 
 int GRID_COLOR1_R  = 255 ;
