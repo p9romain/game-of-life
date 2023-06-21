@@ -7,6 +7,7 @@
 
 # Bonus
 - [ ] Resizable window (brrr)
+- [X] Movable grid
 - [ ] Zoom and dezoom ?
 - [ ] Info button (how the game works + the app)
 - [ ] Settings button (change delay, grid size on screen, colors and show grid or not)

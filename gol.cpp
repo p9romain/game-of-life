@@ -1,4 +1,5 @@
 #include <array>
+#include <iostream>
 #include <SDL2/SDL.h>
 
 #include "params.hpp"
@@ -6,22 +7,22 @@
 
 
 template<std::size_t w, std::size_t h>
-void drawPixels( SDL_Renderer* rd, const std::array<std::array<bool, w>, h>* a)
+void drawPixels( SDL_Renderer* rd, const std::array<std::array<bool, w>, h>* a, int ox, int oy)
 {
-  for ( std::size_t i = 0 ; i < h/3 + 1 ; i++ )
+  for ( std::size_t i = ox ; i < ox + GRID_H ; i++ )
   {
-    for ( std::size_t j = 0 ; j < w/3 + 1 ; j++ )
+    for ( std::size_t j = oy ; j < oy + GRID_W ; j++ )
     {
-      if ( (*a).at(i+h/3).at(j+w/3) )
+      if ( (*a).at(i).at(j) )
       {
         SDL_SetRenderDrawColor(rd, P_COLOR_R, P_COLOR_G, P_COLOR_B, 255) ;
-        SDL_Rect rect = { int(j-1)*P_SIZE, int(i-1)*P_SIZE, P_SIZE, P_SIZE } ;
+        SDL_Rect rect = { int(j-oy-1)*P_SIZE, int(i-ox-1)*P_SIZE, P_SIZE, P_SIZE } ;
         SDL_RenderFillRect(rd, &rect) ;
       }
-      else if ( (i+j)%2 == 0 or (i-j)%2 == 0 )
+      else if ( (i+j-ox-oy)%2 == 0 or (i-j-ox+oy)%2 == 0 )
       {
         SDL_SetRenderDrawColor(rd, GRID_COLOR2_R, GRID_COLOR2_G, GRID_COLOR2_B, 255) ;
-        SDL_Rect rect = { int(j-1)*P_SIZE, int(i-1)*P_SIZE, P_SIZE, P_SIZE } ;
+        SDL_Rect rect = { int(j-oy-1)*P_SIZE, int(i-ox-1)*P_SIZE, P_SIZE, P_SIZE } ;
         SDL_RenderFillRect(rd, &rect) ;
       }
     }
@@ -115,14 +116,22 @@ int main(int argc, char **argv)
   SDL_Window* wnd = SDL_CreateWindow("Game of Life", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, SDL_WINDOW_SHOWN) ;
   SDL_Renderer* rd = SDL_CreateRenderer(wnd, -1, 0) ;
 
-  std::array<std::array<bool, 3*GRID_W>, 3*GRID_H> a ;
+  std::array<std::array<bool, SIZE*GRID_W>, SIZE*GRID_H> a ;
   init(&a) ;
+
+  int ox = SIZE/2*GRID_H ;
+  int oy = SIZE/2*GRID_W ;
 
   int x, y ;
   int old_x = -1 ;
   int old_y = -1 ;
 
-  bool hold = false ;
+  bool hold_mouse = false ;
+  bool hold_up = false ;
+  bool hold_down = false ;
+  bool hold_left = false ;
+  bool hold_right = false ;
+
   bool start = false ;
   bool quit = false ;
 
@@ -139,33 +148,50 @@ int main(int argc, char **argv)
       if ( evt.type == SDL_QUIT ) quit = true ;
       else if ( evt.type == SDL_KEYDOWN ) 
       {
-        if ( evt.key.keysym.sym == SDLK_r or evt.key.keysym.sym == SDLK_F2 )
+        if ( evt.key.keysym.sym == SDLK_r or evt.key.keysym.sym == SDLK_F2 or evt.key.keysym.sym == SDLK_BACKSPACE )
         {
           init(&a) ;
           start = false ;
         }
         if ( evt.key.keysym.sym == SDLK_p or evt.key.keysym.sym == SDLK_ESCAPE ) start = not start ;
-        else start = true ;
+        else if ( evt.key.keysym.sym == SDLK_SPACE or evt.key.keysym.sym == SDLK_RETURN ) start = true ;
+
+        if ( evt.key.keysym.sym == SDLK_z or evt.key.keysym.sym == SDLK_UP ) hold_up = true ;
+        else if ( evt.key.keysym.sym == SDLK_s or evt.key.keysym.sym == SDLK_DOWN ) hold_down = true ;
+        if ( evt.key.keysym.sym == SDLK_q or evt.key.keysym.sym == SDLK_LEFT ) hold_left = true ;
+        else if ( evt.key.keysym.sym == SDLK_d or evt.key.keysym.sym == SDLK_RIGHT ) hold_right = true ;
       }
-      else if ( evt.type == SDL_MOUSEBUTTONDOWN ) hold = true ;
+      else if ( evt.type == SDL_KEYUP )
+      {
+        if ( evt.key.keysym.sym == SDLK_z or evt.key.keysym.sym == SDLK_UP ) hold_up = false ;
+        else if ( evt.key.keysym.sym == SDLK_s or evt.key.keysym.sym == SDLK_DOWN ) hold_down = false ;
+        if ( evt.key.keysym.sym == SDLK_q or evt.key.keysym.sym == SDLK_LEFT ) hold_left = false ;
+        else if ( evt.key.keysym.sym == SDLK_d or evt.key.keysym.sym == SDLK_RIGHT ) hold_right = false ;
+      }
+      else if ( evt.type == SDL_MOUSEBUTTONDOWN ) hold_mouse = true ;
       else if ( evt.type == SDL_MOUSEBUTTONUP ) 
       {
-        hold = false ;
+        hold_mouse = false ;
         old_x = -1 ;
         old_y = -1 ;
       }
 
-      if ( not start and hold and evt.button.button == SDL_BUTTON_LEFT )
+      if ( not start and hold_mouse and evt.button.button == SDL_BUTTON_LEFT )
       {
-        x = int(GRID_H + evt.button.y/float(P_SIZE)) ;
-        y = int(GRID_W + evt.button.x/float(P_SIZE)) ;
+        x = int(ox + evt.button.y/float(P_SIZE)) + 1 ;
+        y = int(oy + evt.button.x/float(P_SIZE)) + 1 ;
         if ( x != old_x or y != old_y ) a[x][y] = not a[x][y] ;
         old_x = x ;
         old_y = y ;
       }
+
+      if ( hold_up and ox > GRID_H ) ox-- ;
+      if ( hold_down and ox < (SIZE-2)*GRID_H ) ox++ ;
+      if ( hold_left and oy > GRID_W ) oy-- ;
+      if ( hold_right and oy < (SIZE-2)*GRID_W ) oy++ ;
     }
 
-    drawPixels(rd, &a) ;
+    drawPixels(rd, &a, ox, oy) ;
 
     if ( start )
     {
