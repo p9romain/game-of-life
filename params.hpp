@@ -5,13 +5,13 @@
   #define W_HEIGHT 720
   #define RATIO float(W_WIDTH)/float(W_HEIGHT)
 
-  #define SIZE 15
-  #define P_SIZE_MIN 5
+  #define SIZE 10
+  #define P_SIZE_MIN 4
   extern int P_SIZE ;
   extern int GRID_W ;
   extern int GRID_H ;
 
-  extern int DELAY ;
+  extern float DELAY ;
 
   extern int GRID_COLOR1_R ;
   extern int GRID_COLOR1_G ;

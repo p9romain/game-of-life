@@ -80,9 +80,9 @@ std::vector<std::vector<bool>> update( const std::vector<std::vector<bool>>* v )
 
 void reset(std::vector<std::vector<bool>>* v)
 {
-  for ( std::size_t i = 0 ; i < SIZE*GRID_H ; i++ )
+  for ( std::size_t i = 0 ; i < (*v).size() ; i++ )
   {
-    for ( std::size_t j = 0 ; j < SIZE*GRID_W ; j++ )
+    for ( std::size_t j = 0 ; j < (*v).at(i).size() ; j++ )
     {
       (*v)[i][j] = false ;
     }
@@ -91,9 +91,9 @@ void reset(std::vector<std::vector<bool>>* v)
 
 bool isEmpty(std::vector<std::vector<bool>>* v)
 {
-  for ( std::size_t i = 0 ; i < SIZE*GRID_H ; i++ )
+  for ( std::size_t i = 0 ; i < (*v).size() ; i++ )
   {
-    for ( std::size_t j = 0 ; j < SIZE*GRID_W ; j++ )
+    for ( std::size_t j = 0 ; j < (*v).at(i).size() ; j++ )
     {
       if ( (*v).at(i).at(j) ) return false ;
     }
@@ -168,14 +168,16 @@ int main(int argc, char **argv)
         old_x = -1 ;
         old_y = -1 ;
       }
-      else if ( evt.type == SDL_MOUSEWHEEL )
-      {
-        if ( evt.wheel.y > 0 and GRID_H > 5 ) P_SIZE++ ;
-        else if ( evt.wheel.y < 0 and P_SIZE > P_SIZE_MIN ) P_SIZE-- ;
+      // TODO zoom and dezoom
 
-        GRID_W = int( float(W_WIDTH) / float(P_SIZE) ) + 1 ;
-        GRID_H = int( float(W_HEIGHT) / float(P_SIZE) ) + 1 ;
-      }
+      // else if ( evt.type == SDL_MOUSEWHEEL )
+      // {
+      //   if ( evt.wheel.y > 0 ) P_SIZE++ ;
+      //   else if ( evt.wheel.y < 0 and P_SIZE > P_SIZE_MIN ) P_SIZE-- ;
+
+      //   GRID_W = int( float(W_WIDTH) / float(P_SIZE) ) + 1 ;
+      //   GRID_H = int( float(W_HEIGHT) / float(P_SIZE) ) + 1 ;
+      // }
 
       if ( not start and hold_mouse and evt.button.button == SDL_BUTTON_LEFT )
       {
