@@ -5,7 +5,7 @@
   #define W_HEIGHT 720
   #define RATIO float(W_WIDTH)/float(W_HEIGHT)
 
-  #define SIZE 10
+  #define SIZE 6
   #define P_SIZE_MIN 4
   extern int P_SIZE ;
   extern int GRID_W ;

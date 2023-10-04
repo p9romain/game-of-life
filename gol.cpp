@@ -1,5 +1,4 @@
 #include <vector>
-#include <iostream>
 #include <SDL2/SDL.h>
 
 #include "params.hpp"
@@ -32,7 +31,7 @@ void drawPixels( SDL_Renderer* rd, const std::vector<std::vector<bool>>* v, int 
 
 bool validNeighbour( const std::vector<std::vector<bool>>* v, const int i, const int j )
 {
-  return not ( i < 0 or i >= SIZE*GRID_H or j < 0 or j >= SIZE*GRID_W ) ;
+  return not ( i < 0 or i >= (*v).size() or j < 0 or j >= (*v).at(0).size() ) ;
 }
 
 int numberNeighbours( const std::vector<std::vector<bool>>* v, const int x, const int y )
@@ -55,9 +54,9 @@ std::vector<std::vector<bool>> update( const std::vector<std::vector<bool>>* v )
 {
   std::vector<std::vector<bool>> res = *v ;
   bool b ;
-  for ( std::size_t i = 0 ; i < SIZE*GRID_H ; i++ )
+  for ( std::size_t i = 0 ; i < (*v).size() ; i++ )
   {
-    for ( std::size_t j = 0 ; j < SIZE*GRID_W ; j++ )
+    for ( std::size_t j = 0 ; j < (*v).at(i).size() ; j++ )
     {
       int n = numberNeighbours(v, i, j) ;
       if ( (*v).at(i).at(j) )
@@ -120,6 +119,8 @@ int main(int argc, char **argv)
   int old_y = -1 ;
 
   bool hold_mouse = false ;
+  bool cell_type_when_holding = false ;
+
   bool hold_up = false ;
   bool hold_down = false ;
   bool hold_left = false ;
@@ -145,6 +146,8 @@ int main(int argc, char **argv)
         {
           reset(&v) ;
           start = false ;
+          ox = SIZE/2*GRID_H ;
+          oy = SIZE/2*GRID_W ;
         }
         if ( evt.key.keysym.sym == SDLK_p or evt.key.keysym.sym == SDLK_ESCAPE ) start = not start ;
         else if ( evt.key.keysym.sym == SDLK_SPACE or evt.key.keysym.sym == SDLK_RETURN ) start = true ;
@@ -161,7 +164,13 @@ int main(int argc, char **argv)
         if ( evt.key.keysym.sym == SDLK_q or evt.key.keysym.sym == SDLK_LEFT ) hold_left = false ;
         else if ( evt.key.keysym.sym == SDLK_d or evt.key.keysym.sym == SDLK_RIGHT ) hold_right = false ;
       }
-      else if ( evt.type == SDL_MOUSEBUTTONDOWN ) hold_mouse = true ;
+      else if ( evt.type == SDL_MOUSEBUTTONDOWN ) 
+      {
+        x = int(ox + evt.button.y/float(P_SIZE)) + 1 ;
+        y = int(oy + evt.button.x/float(P_SIZE)) + 1 ;
+        cell_type_when_holding = not v[x][y] ;
+        hold_mouse = true ;
+      }
       else if ( evt.type == SDL_MOUSEBUTTONUP ) 
       {
         hold_mouse = false ;
@@ -183,7 +192,20 @@ int main(int argc, char **argv)
       {
         x = int(ox + evt.button.y/float(P_SIZE)) + 1 ;
         y = int(oy + evt.button.x/float(P_SIZE)) + 1 ;
-        if ( x != old_x or y != old_y ) v[x][y] = not v[x][y] ;
+        if ( x != old_x or y != old_y ) 
+        {
+          if ( cell_type_when_holding ) v[x][y] = true ;
+          else // larger eraser
+          {
+            for ( int i = x-1 ; i < x+2 ; i++ )
+            {
+              for ( int j = y-1 ; j < y+2 ; j++ )
+              {
+                if ( validNeighbour(&v, i, j) ) v[i][j] = false ;
+              }
+            }
+          }
+        }
         old_x = x ;
         old_y = y ;
       }

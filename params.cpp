@@ -4,7 +4,7 @@ int P_SIZE = P_SIZE_MIN ;
 int GRID_W = int( float(W_WIDTH) / float(P_SIZE) ) + 1 ;
 int GRID_H = int( float(W_HEIGHT) / float(P_SIZE) ) + 1 ;
 
-float DELAY = 1/1000000. ;
+float DELAY = 5 ;
 
 int GRID_COLOR1_R  = 255 ;
 int GRID_COLOR1_G  = 255 ;
