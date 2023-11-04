@@ -7,7 +7,7 @@ int W_GRID_W = int( float(W_WIDTH) / float(P_SIZE) ) + 1 ;
 int W_GRID_H = int( float(W_HEIGHT) / float(P_SIZE) ) + 1 ;
 
 // Delay between screen update
-float DELAY = 5 ;
+float DELAY = 50 ;
 
 // Color of pixel 1
 int GRID_COLOR1_R  = 255 ;
@@ -22,3 +22,8 @@ int GRID_COLOR2_B  = 240 ;
 int P_COLOR_R  = 0 ;
 int P_COLOR_G  = 0 ;
 int P_COLOR_B  = 0 ;
+
+bool Coord::operator==(const Coord& c) const
+{
+  return c.x == x and c.y == y ;
+}

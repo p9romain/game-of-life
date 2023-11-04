@@ -1,8 +1,9 @@
 #ifndef PARAMS_HPP
 #define PARAMS_HPP
 
-  #include <vector>
-  #include <set>
+  #include <functional>
+  #include <optional>
+  #include <unordered_set>
 
   // Windows size
   #define W_WIDTH 1080
@@ -41,9 +42,15 @@
   {
     int x, y ;
    
-    bool operator<(const Coord& c) const
+    bool operator==(const Coord& c) const ;
+  } ;
+
+  template<>
+  struct std::hash<Coord> 
+  {
+    std::size_t operator()(const Coord& c) const 
     {
-       return x < c.x or y < c.y ;
+      return std::hash<size_t>()( (size_t) c.x | ((size_t) c.y << 32) ) ;
     }
   } ;
 
@@ -51,16 +58,18 @@
   struct Game 
   {
     // Grid indexes of the top-left pixel
-    Coord origin = { SIZE/2*W_GRID_H, SIZE/2*W_GRID_W } ;
+    Coord origin = { 0, 0 } ;
     // Old indexes of the mouse on screen (need for holding)
-    Coord old_pos = { -1, -1 } ;
+    // Optional : the old position, std::nullopt if not holding
+    std::optional<Coord> old_mouse_pos = std::nullopt ;
     // Indexes of the mouse on screen
-    Coord pos ;
+    Coord mouse_pos ;
 
     // To manage holding to draw or erase
     struct Mouse
     {
       bool hold = false ;
+      bool button = false ; // true = left, false = right
       bool cell_type = false ;
     } mouse ;
 
@@ -73,11 +82,8 @@
       bool hold_right = false ;
     } move ;
 
-    // Grid of pixel (soon depreciated)
-    std::vector<std::vector<bool>> grid = 
-      std::vector<std::vector<bool>>(SIZE*W_GRID_H, std::vector<bool>(SIZE*W_GRID_W, false)) ;
     // Set of all alive cells
-    std::set<Coord> alive_cells ;
+    std::unordered_set<Coord> alive_set ;
 
     // Booleans for pausing the game or quiting
     bool start = false ;

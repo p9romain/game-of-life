@@ -1,4 +1,7 @@
-#include <vector>
+#include <SDL2/SDL_keycode.h>
+#include <optional>
+#include <iostream>
+#include <unordered_set>
 #include <SDL2/SDL.h>
 
 #include "params.hpp"
@@ -7,26 +10,26 @@
  * @fn void drawPixels( SDL_Renderer* rd, const Game* g)
  * Display each pixels in the screen range
  * 
- * @param[out] rd, the window randerer from SDL2
- * @param[out] g, the GAME !! (with all his data)
+ * @param[inout] rd, the window randerer from SDL2
+ * @param[inout] g, the GAME !! (with all his data)
  *
  * @return void
  */
-void drawPixels( SDL_Renderer* rd, const Game* g)
+void drawPixels( SDL_Renderer* rd, const Game& g)
 {
-  for ( std::size_t i = (*g).origin.x ; i < (*g).origin.x + W_GRID_H ; i++ )
+  for ( int i = g.origin.x ; i < g.origin.x + W_GRID_H ; i++ )
   {
-    for ( std::size_t j = (*g).origin.y ; j < (*g).origin.y + W_GRID_W ; j++ )
+    for ( int j = g.origin.y ; j < g.origin.y + W_GRID_W ; j++ )
     {
       // Cell alive
-      if ( (*g).grid.at(i).at(j) )
+      if ( g.alive_set.contains( {(int) i, (int) j} ) )
       {
         SDL_SetRenderDrawColor(rd, P_COLOR_R, P_COLOR_G, P_COLOR_B, 255) ;
       }
       // Grid
       else if ( 
-             ( ( i + j ) - ( (*g).origin.x + (*g).origin.y ) )%2 == 0 
-          or ( ( i - j ) - ( (*g).origin.x - (*g).origin.y ) )%2 == 0 
+             ( abs(i) + abs(j) )%2 == ( abs(g.origin.x) + abs(g.origin.y) )%2 
+          or ( abs(i) - abs(j) )%2 == ( abs(g.origin.x) - abs(g.origin.y) )%2
         )
       {
         SDL_SetRenderDrawColor(rd, GRID_COLOR2_R, GRID_COLOR2_G, GRID_COLOR2_B, 255) ;
@@ -35,196 +38,250 @@ void drawPixels( SDL_Renderer* rd, const Game* g)
       {
         SDL_SetRenderDrawColor(rd, GRID_COLOR1_R, GRID_COLOR1_R, GRID_COLOR1_R, 255) ;
       }
-      SDL_Rect rect = { int( j - (*g).origin.y - 1)*P_SIZE, int( i - (*g).origin.x - 1 )*P_SIZE, P_SIZE, P_SIZE } ;
+      SDL_Rect rect = { int( j - g.origin.y - 1)*P_SIZE, int( i - g.origin.x - 1 )*P_SIZE, P_SIZE, P_SIZE } ;
       SDL_RenderFillRect(rd, &rect) ;
     }
   }
 
   // Eraser
-  if ( (*g).mouse.hold and not (*g).mouse.cell_type )
+  if ( g.mouse.hold and not g.mouse.button )
   {
     SDL_SetRenderDrawColor(rd, 255, 0, 0, 255) ;
-    SDL_Rect rect = { int( (*g).pos.y - (*g).origin.y - 2)*P_SIZE, int( (*g).pos.x - (*g).origin.x - 2 )*P_SIZE, 3*P_SIZE, 3*P_SIZE } ;
+    SDL_Rect rect = { int( g.mouse_pos.y - g.origin.y - 2)*P_SIZE, int( g.mouse_pos.x - g.origin.x - 2 )*P_SIZE, 3*P_SIZE, 3*P_SIZE } ;
     SDL_RenderDrawRect(rd, &rect) ;
   }
 }
 
 /**
- * @fn bool validNeighbour( const std::vector<std::vector<bool>>* grid, const int i, const int j )
- * Check if the point (i, j) is in the grid
- * 
- * @param[out] grid, all the cells
- * @param[in] i, the x coordonate
- * @param[in] j, the y coordonate
- *
- * @return bool
- * @retval true if (i, j) is in the grid, false else
- */
-bool validNeighbour( const std::vector<std::vector<bool>>* grid, const int i, const int j )
-{
-  return not ( i < 0 or i >= (*grid).size() or j < 0 or j >= (*grid).at(0).size() ) ;
-}
-
-/**
- * @fn int numberNeighbours( const std::vector<std::vector<bool>>* grid, const int x, const int y )
+ * @fn int numberNeighbours( std::unordered_set<Coord>* alive_set, const int x, const int y )
  * Count all the alive neighbours around the point (x, y)
  * 
- * @param[out] grid, all the cells
+ * @param[inout] alive_set, all the alive_cells
  * @param[in] x, the x coordonate
  * @param[in] y, the y coordonate
  *
  * @return int
  * @retval a number between 0 and 8
  */
-int numberNeighbours( const std::vector<std::vector<bool>>* grid, const int x, const int y )
+int numberNeighbours( const std::unordered_set<Coord>& alive_set, Coord c )
 {
   int n = 0 ;
-  for ( int i = x - 1 ; i < x + 2 ; i++ )
+  for ( int i = c.x - 1 ; i < c.x + 2 ; i++ )
   {
-    for ( int j = y - 1 ; j < y + 2 ; j++ )
+    for ( int j = c.y - 1 ; j < c.y + 2 ; j++ )
     {
-      if ( i == x and j == y ) continue ;
-      if ( validNeighbour(grid, i, j) ) n += (*grid).at(i).at(j) ;
+      if ( i == c.x and j == c.y ) continue ;
+      if ( alive_set.contains( {i, j} ) ) n++ ;
     }
   }
   return n ;
 }
 
-Game update( const Game* g )
+/**
+ * @fn void updateConway( Game& g )
+ * Update the game with the Game of Life rules (check out on Wikipedia if don't know them)
+ * 
+ * @param[inout] g, the GAME !!
+ *
+ * @return void
+ */
+void updateConway( Game& g )
 {
-  Game res = *g ;
-  bool b ;
-  for ( std::size_t i = 0 ; i < ((*g).grid).size() ; i++ )
+  if ( g.alive_set.empty() ) g.start = false ;
+  else
   {
-    for ( std::size_t j = 0 ; j < ((*g).grid).at(i).size() ; j++ )
+    // Create the set of all the cells to check
+    std::unordered_set<Coord> update_set ;
+    for ( Coord c : g.alive_set )
     {
-      int n = numberNeighbours(&(*g).grid, i, j) ;
-      if ( ((*g).grid).at(i).at(j) )
+      for ( int x = c.x - 1 ; x < c.x + 2 ; x++ )
       {
-        if ( not ( n == 2 or n == 3 ) ) b = false ;
-        else b = true ;
+        for ( int y = c.y - 1 ; y < c.y + 2 ; y++ )
+        {
+          update_set.insert( {x, y} ) ;
+        }
       }
-      else
-      {
-        if ( n == 3 ) b = true ;
-        else b = false ;
-      }
-      res.grid[i][j] = b ;
     }
-  }
-  return res ;
-}
 
-void reset(std::vector<std::vector<bool>>* grid)
-{
-  for ( std::size_t i = 0 ; i < (*grid).size() ; i++ )
-  {
-    for ( std::size_t j = 0 ; j < (*grid).at(i).size() ; j++ )
-    {
-      (*grid)[i][j] = false ;
-    }
-  }
-}
+    // The new set of alive celles
+    std::unordered_set<Coord> new_alive_set ;
 
-bool isEmpty(std::vector<std::vector<bool>>* grid)
-{
-  for ( std::size_t i = 0 ; i < (*grid).size() ; i++ )
-  {
-    for ( std::size_t j = 0 ; j < (*grid).at(i).size() ; j++ )
+    // Check birth or death
+    for ( Coord c : update_set )
     {
-      if ( (*grid).at(i).at(j) ) return false ;
+      int n = numberNeighbours(g.alive_set, c) ;
+      if ( n == 3 or ( n == 2 and g.alive_set.contains(c) ) ) new_alive_set.insert(c) ;
     }
+
+    if ( g.alive_set == new_alive_set )
+    {
+      g.start = false ;
+    }
+
+    g.alive_set = new_alive_set ;
   }
-  return true ;
 }
 
 // TODO
-void actionKeys( Game* g )
+void keyListener( Game& g )
 {
   SDL_Event evt ;
   while ( SDL_PollEvent(&evt) )
   {
-    if ( evt.type == SDL_QUIT ) (*g).quit = true ;
-    else if ( evt.type == SDL_KEYDOWN ) 
+    switch ( evt.type )
     {
-      if ( evt.key.keysym.sym == SDLK_r or evt.key.keysym.sym == SDLK_F2 or evt.key.keysym.sym == SDLK_BACKSPACE )
+      case SDL_QUIT :
       {
-        reset(&(*g).grid) ;
-        (*g).start = false ;
-        (*g).origin.x = SIZE/2*W_GRID_H ;
-        (*g).origin.y = SIZE/2*W_GRID_W ;
+        g.quit = true ;
+        break ;
       }
-      if ( evt.key.keysym.sym == SDLK_p or evt.key.keysym.sym == SDLK_ESCAPE ) (*g).start = not (*g).start ;
-      else if ( evt.key.keysym.sym == SDLK_SPACE or evt.key.keysym.sym == SDLK_RETURN ) (*g).start = true ;
-
-      if ( evt.key.keysym.sym == SDLK_z or evt.key.keysym.sym == SDLK_UP ) (*g).move.hold_up = true ;
-      else if ( evt.key.keysym.sym == SDLK_s or evt.key.keysym.sym == SDLK_DOWN ) (*g).move.hold_down = true ;
-      if ( evt.key.keysym.sym == SDLK_q or evt.key.keysym.sym == SDLK_LEFT ) (*g).move.hold_left = true ;
-      else if ( evt.key.keysym.sym == SDLK_d or evt.key.keysym.sym == SDLK_RIGHT ) (*g).move.hold_right = true ;
-    }
-    else if ( evt.type == SDL_KEYUP )
-    {
-      if ( evt.key.keysym.sym == SDLK_z or evt.key.keysym.sym == SDLK_UP ) (*g).move.hold_up = false ;
-      else if ( evt.key.keysym.sym == SDLK_s or evt.key.keysym.sym == SDLK_DOWN ) (*g).move.hold_down = false ;
-      if ( evt.key.keysym.sym == SDLK_q or evt.key.keysym.sym == SDLK_LEFT ) (*g).move.hold_left = false ;
-      else if ( evt.key.keysym.sym == SDLK_d or evt.key.keysym.sym == SDLK_RIGHT ) (*g).move.hold_right = false ;
-    }
-    else if ( evt.type == SDL_MOUSEBUTTONDOWN ) 
-    {
-      (*g).pos.x = int((*g).origin.x + evt.button.y/float(P_SIZE)) + 1 ;
-      (*g).pos.y = int((*g).origin.y + evt.button.x/float(P_SIZE)) + 1 ;
-      (*g).mouse.cell_type = not (*g).grid[(*g).pos.x][(*g).pos.y] ;
-      (*g).mouse.hold = true ;
-    }
-    else if ( evt.type == SDL_MOUSEBUTTONUP ) 
-    {
-      (*g).mouse.hold = false ;
-      (*g).old_pos.x = -1 ;
-      (*g).old_pos.y = -1 ;
-    }
-
-    if ( not (*g).start and (*g).mouse.hold )
-    {
-      (*g).pos.x = int((*g).origin.x + evt.button.y/float(P_SIZE)) + 1 ;
-      (*g).pos.y = int((*g).origin.y + evt.button.x/float(P_SIZE)) + 1 ;
-      if ( evt.button.button == SDL_BUTTON_LEFT )
+      case SDL_KEYDOWN :
       {
-        if ( (*g).pos.x != (*g).old_pos.x or (*g).pos.y != (*g).old_pos.y ) 
+        switch ( evt.key.keysym.sym )
         {
-          if ( (*g).mouse.cell_type ) (*g).grid[(*g).pos.x][(*g).pos.y] = true ;
-          else // larger eraser
+          case SDLK_r :
+          case SDLK_F2 :
+          case SDLK_BACKSPACE :
           {
-            for ( int i = (*g).pos.x-1 ; i < (*g).pos.x+2 ; i++ )
-            {
-              for ( int j = (*g).pos.y-1 ; j < (*g).pos.y+2 ; j++ )
-              {
-                if ( validNeighbour(&(*g).grid, i, j) ) (*g).grid[i][j] = false ;
-              }
-            }
+            g.alive_set.clear() ;
+            g.start = false ;
+            g.origin.x = 0 ;
+            g.origin.y = 0 ;
+            break ;
+          }
+          case SDLK_p :
+          case SDLK_ESCAPE :
+          {
+            g.start = not g.start ;
+            break ;
+          }
+          case SDLK_SPACE :
+          case SDLK_RETURN :
+          {
+            g.start = true ;
+            break ;
+          }
+          case SDLK_z :
+          case SDLK_UP :
+          {
+            g.move.hold_up = true ;
+            break ; 
+          }
+          case SDLK_q :
+          case SDLK_LEFT :
+          {
+            g.move.hold_left = true ;
+            break ; 
+          }
+          case SDLK_s :
+          case SDLK_DOWN :
+          {
+            g.move.hold_down = true ;
+            break ; 
+          }
+          case SDLK_d :
+          case SDLK_RIGHT :
+          {
+            g.move.hold_right = true ;
+            break ; 
+          }
+        }
+        break ;
+      }
+      case SDL_KEYUP :
+      {
+        switch ( evt.key.keysym.sym )
+        {
+          case SDLK_z :
+          case SDLK_UP :
+          {
+            g.move.hold_up = false ;
+            break ; 
+          }
+          case SDLK_q :
+          case SDLK_LEFT :
+          {
+            g.move.hold_left = false ;
+            break ; 
+          }
+          case SDLK_s :
+          case SDLK_DOWN :
+          {
+            g.move.hold_down = false ;
+            break ; 
+          }
+          case SDLK_d :
+          case SDLK_RIGHT :
+          {
+            g.move.hold_right = false ;
+            break ; 
+          }
+        }
+        break ;
+      }
+      case SDL_MOUSEBUTTONDOWN :
+      {
+        g.mouse.hold = true ;
+        g.mouse.button = ( evt.button.button == SDL_BUTTON_LEFT ) ;
+        g.mouse.cell_type = g.alive_set.contains( {g.mouse_pos.x, g.mouse_pos.y} ) ;
+        break ;
+      }
+      case SDL_MOUSEBUTTONUP :
+      {
+        g.mouse.hold = false ;
+
+        g.old_mouse_pos = std::nullopt ;
+        break ;
+      }
+      default :
+      {
+        break ;
+      }
+    }
+  }
+}
+
+void refresh( Game& g )
+{
+  // Pen manager
+  if ( not g.start and g.mouse.hold )
+  {
+    int x, y ;
+    SDL_GetMouseState(&x, &y) ;
+    g.mouse_pos.x = int(g.origin.x + y/float(P_SIZE)) + 1 ;
+    g.mouse_pos.y = int(g.origin.y + x/float(P_SIZE)) + 1 ;
+
+    if ( (not g.old_mouse_pos.has_value()) or g.mouse_pos.x != g.old_mouse_pos.value().x or g.mouse_pos.y != g.old_mouse_pos.value().y ) 
+    {
+      // Draw if left-click and cell dead
+      if ( g.mouse.button and not g.mouse.cell_type ) g.alive_set.insert( g.mouse_pos ) ;
+      // Erase if left-click and cell live, or if right-click
+      else if ( (g.mouse.button and not g.mouse.cell_type) or not g.mouse.button )
+      {
+        for ( int i = g.mouse_pos.x-1 ; i < g.mouse_pos.x+2 ; i++ )
+        {
+          for ( int j = g.mouse_pos.y-1 ; j < g.mouse_pos.y+2 ; j++ )
+          {
+            g.alive_set.erase( {i, j} ) ;
           }
         }
       }
-      else if ( evt.button.button == SDL_BUTTON_RIGHT )
-      {
-        if ( (*g).pos.x != (*g).old_pos.x or (*g).pos.y != (*g).old_pos.y ) 
-        {
-          for ( int i = (*g).pos.x-1 ; i < (*g).pos.x+2 ; i++ )
-          {
-            for ( int j = (*g).pos.y-1 ; j < (*g).pos.y+2 ; j++ )
-            {
-              if ( validNeighbour(&(*g).grid, i, j) ) (*g).grid[i][j] = false ;
-            }
-          }
-        }
-      }
-      (*g).old_pos.x = (*g).pos.x ;
-      (*g).old_pos.y = (*g).pos.y ;
     }
 
-    if ( (*g).move.hold_up and (*g).origin.x > W_GRID_H ) (*g).origin.x-- ;
-    if ( (*g).move.hold_down and (*g).origin.x < (SIZE-2)*W_GRID_H ) (*g).origin.x++ ;
-    if ( (*g).move.hold_left and (*g).origin.y > W_GRID_W ) (*g).origin.y-- ;
-    if ( (*g).move.hold_right and (*g).origin.y < (SIZE-2)*W_GRID_W ) (*g).origin.y++ ;
+    // Keep the old_position to not redo again
+    *g.old_mouse_pos = g.mouse_pos ;
+  }
+
+  // Change the grid displayed
+  if ( g.move.hold_up != g.move.hold_down )
+  {
+    if ( g.move.hold_up ) g.origin.x-- ;
+    if ( g.move.hold_down ) g.origin.x++ ;
+  }
+  if ( g.move.hold_left != g.move.hold_right )
+  {
+    if ( g.move.hold_left ) g.origin.y-- ;
+    if ( g.move.hold_right ) g.origin.y++ ;
   }
 }
 
@@ -240,30 +297,36 @@ int main(int argc, char **argv)
   P_SIZE *= 4 ;
 
   // The GAME !!
-  Game g ;
+  Game* g = new Game() ;
 
-  while ( not g.quit )
+  while ( not g->quit )
   {
-    if ( isEmpty(&g.grid) ) g.start = false ;
-
+    // Clear screen
     SDL_RenderClear(rd) ;
 
     // Key listener and updater
-    actionKeys(&g) ;
+    keyListener(*g) ;
+    refresh(*g) ;
 
     // Displayer
-    drawPixels(rd, &g) ;
+    drawPixels(rd, *g) ;
 
     // Update the cell life according to their fate (no)
-    if ( g.start )
+    if ( g->start )
     {
-      g = update(&g) ;
+      updateConway(*g) ;
       SDL_Delay(DELAY) ;
     }
+    else
+    {
+      SDL_Delay(25) ;
+    }
+
     SDL_RenderPresent(rd) ;
   }
 
   // Adieu !
+  free(g) ;
   SDL_DestroyRenderer(rd) ;
   SDL_DestroyWindow(wnd) ;
   SDL_Quit() ;
