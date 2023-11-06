@@ -1,4 +1,5 @@
 #include <SDL2/SDL_events.h>
+#include <SDL2/SDL_timer.h>
 #include <optional>
 #include <iostream>
 #include <unordered_set>
@@ -18,18 +19,17 @@
  */
 void drawPixels( SDL_Renderer* rd, const Game& g)
 {
-  for ( int i = g.origin.x ; i < g.origin.x + g.window.grid_height() + 1 ; i++ )
+  for ( int i = g.origin.x - g.window.grid_height() / 2 ; i < g.origin.x + 3/2 * g.window.grid_height() + 1 ; i++ )
   {
-    for ( int j = g.origin.y ; j < g.origin.y + g.window.grid_width() + 1 ; j++ )
+    for ( int j = g.origin.y - g.window.grid_width() / 2 ; j < g.origin.y + 3/2 * g.window.grid_width() + 1 ; j++ )
     {
       // Cell alive
-      if ( g.alive_set.contains( {(int) i, (int) j} ) )
+      if ( g.alive_set.contains( {i, j} ) )
       {
         SDL_SetRenderDrawColor(rd, g.window.c_pixel.R, g.window.c_pixel.G, g.window.c_pixel.B, 255) ;
       }
       // Grid
-      else if ( g.window.display_grid   
-          and g.window.zoom >= 0.5        // if too zoomed : disable grid
+      else if ( g.window.display_grid
           and
           (    ( abs(i) + abs(j) )%2 == 0
             or ( abs(i) - abs(j) )%2 == 0
@@ -42,8 +42,8 @@ void drawPixels( SDL_Renderer* rd, const Game& g)
       {
         SDL_SetRenderDrawColor(rd, g.window.c_grid1.R, g.window.c_grid1.G, g.window.c_grid1.B, 255) ;
       }
-      SDL_Rect rect = { int( j - g.origin.y - 1 ) * g.window.current_p_size, 
-                        int( i - g.origin.x - 1 ) * g.window.current_p_size, 
+      SDL_Rect rect = { int( j + g.window.grid_width() / 2 - g.origin.y - 1 ) * g.window.current_p_size, 
+                        int( i + g.window.grid_height() / 2 - g.origin.x - 1 ) * g.window.current_p_size, 
                         g.window.current_p_size, g.window.current_p_size } ;
       SDL_RenderFillRect(rd, &rect) ;
     }
@@ -53,8 +53,8 @@ void drawPixels( SDL_Renderer* rd, const Game& g)
   if ( g.mouse.hold and ( (g.mouse.button and g.mouse.cell_type) or not g.mouse.button ) )
   {
     SDL_SetRenderDrawColor(rd, 255, 0, 0, 255) ;
-    SDL_Rect rect = { int( g.mouse_pos.y - g.origin.y - 2 ) * g.window.current_p_size, 
-                      int( g.mouse_pos.x - g.origin.x - 2 ) * g.window.current_p_size, 
+    SDL_Rect rect = { int( g.mouse_pos.y + g.window.grid_width() / 2 - g.origin.y - 2 ) * g.window.current_p_size, 
+                      int( g.mouse_pos.x + g.window.grid_height() / 2 - g.origin.x - 2 ) * g.window.current_p_size, 
                       3*g.window.current_p_size, 3*g.window.current_p_size } ;
     SDL_RenderDrawRect(rd, &rect) ;
   }
@@ -95,7 +95,7 @@ int numberNeighbours( const std::unordered_set<Coord>& alive_set, Coord c )
  */
 void updateConway( Game& g )
 {
-  if ( g.alive_set.empty() ) g.start = false ;
+  if ( g.alive_set.empty() or g.alive_set.size() >= 1e9 ) g.start = false ;
   else
   {
     // Create the set of all the cells to check
@@ -249,6 +249,7 @@ void keyListener( Game& g )
         {
           case SDL_BUTTON_MIDDLE :
           {
+            g.mouse.hold = false ;
             g.window.zoom = 1 ;
             break ;
           }
@@ -275,14 +276,14 @@ void keyListener( Game& g )
       case SDL_MOUSEWHEEL :
       {
         // Scroll up (zoom)
-        if ( evt.wheel.y > 0 and g.window.zoom <= g.window.zoom_max )
+        if ( evt.wheel.y > 0 and g.window.zoom < g.window.zoom_max )
         {
-          g.window.zoom += 0.01 ;
+          g.window.zoom += g.window.zoom_min ;
         }
         // Scroll down (dezoom)
-        else if ( evt.wheel.y < 0 and g.window.zoom_min <= g.window.zoom )
+        else if ( evt.wheel.y < 0 and g.window.zoom_min < g.window.zoom )
         {
-          g.window.zoom -= 0.01 ;
+          g.window.zoom -= g.window.zoom_min ;
         }
         break ;
       }
@@ -305,7 +306,7 @@ void keyListener( Game& g )
 void refresh( Game& g )
 {
   // Zoom manager
-  g.window.current_p_size = g.window.zoom * g.window.p_size ; 
+  g.window.current_p_size = std::exp(g.window.zoom - 1) * g.window.p_size ;
 
   // Pen manager
   if ( not g.start and g.mouse.hold )
@@ -395,7 +396,7 @@ int main(int argc, char **argv)
       updateConway(*g) ;
     }
 
-    SDL_Delay(35) ;
+    SDL_Delay(30) ;
 
     SDL_RenderPresent(rd) ;
   }

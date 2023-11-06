@@ -4,6 +4,7 @@
   #include <functional>
   #include <optional>
   #include <unordered_set>
+  #include <cmath>
 
   // Windows size
   #define W_WIDTH 1080
@@ -71,8 +72,9 @@
 
       const int p_size = 15 ;
       int current_p_size = p_size ;
-      const float zoom_min = 0.15 ;
-      const float zoom_max = 15 ;
+
+      const float zoom_min = 0.01 ;
+      const float zoom_max = 3 ;
       float zoom = 1 ;
 
       int grid_width() const { return int( float(W_WIDTH) / float(this->current_p_size) ) + 1 ; }
