@@ -79,8 +79,6 @@
 
       int grid_width() const { return int( float(W_WIDTH) / float(this->current_p_size) ) + 1 ; }
       int grid_height() const { return int( float(W_HEIGHT) / float(this->current_p_size) ) + 1 ; }
-
-      float delay = 100 ;
     } window ;
 
     // Set of all alive cells
@@ -89,6 +87,8 @@
     // Booleans for pausing the game or quiting
     bool start = false ;
     bool quit = false ;
+
+    int update_interval = 1 ;
 
     void updateMousePos() ;
   } ;

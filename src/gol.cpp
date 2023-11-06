@@ -1,5 +1,6 @@
 #include <SDL2/SDL_events.h>
 #include <SDL2/SDL_timer.h>
+#include <cstdint>
 #include <optional>
 #include <iostream>
 #include <unordered_set>
@@ -160,8 +161,7 @@ void keyListener( Game& g )
           {
             g.alive_set.clear() ;
             g.start = false ;
-            g.origin.x = 0 ;
-            g.origin.y = 0 ;
+            g.origin = {0, 0} ;
             break ;
           }
           case SDLK_p :
@@ -377,6 +377,7 @@ int main(int argc, char **argv)
 
   // The GAME !!
   Game* g = new Game() ;
+  unsigned int old_tick = SDL_GetTicks() / g->update_interval + 1 ;
 
   while ( not g->quit )
   {
@@ -390,10 +391,15 @@ int main(int argc, char **argv)
     // Displayer
     drawPixels(rd, *g) ;
 
+
     // Update the cell life according to their fate (no)
     if ( g->start )
     {
-      updateConway(*g) ;
+      if ( SDL_GetTicks() / g->update_interval > old_tick )
+      {
+        updateConway(*g) ;
+        old_tick = SDL_GetTicks() / g->update_interval ;
+      }
     }
 
     SDL_Delay(30) ;
@@ -402,7 +408,7 @@ int main(int argc, char **argv)
   }
 
   // Adieu !
-  free(g) ;
+  delete g ;
   SDL_DestroyRenderer(rd) ;
   SDL_DestroyWindow(wnd) ;
   SDL_Quit() ;
