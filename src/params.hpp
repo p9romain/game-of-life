@@ -50,33 +50,35 @@
       bool cell_type = false ;
     } mouse ;
 
-    // To manage camera (grid part which is drawn)
-    struct Camera
-    {
-      bool hold_up = false ;
-      bool hold_down = false ;
-      bool hold_left = false ;
-      bool hold_right = false ;
-    } move ;
-
+    // To manage displaying
     struct Display
     {
+      // To manage camera (grid part which is drawn)
+      struct Camera
+      {
+        bool hold_up = false ;
+        bool hold_down = false ;
+        bool hold_left = false ;
+        bool hold_right = false ;
+
+        float offset = 0.5 ;
+      } move ;
+
+      bool display_grid = true ;
       Color c_grid1 = { 255, 255, 255 } ;
       Color c_grid2 = { 240, 240, 240 } ;
-      bool display_grid = true ;
       Color c_pixel = { 0, 0, 0 } ;
 
-      static const int p_size_min = 4 ;
-      static const int p_size_max = 50 ;
-      int p_size = 15 ;
+      const int p_size = 15 ;
+      int current_p_size = p_size ;
+      const float zoom_min = 0.15 ;
+      const float zoom_max = 15 ;
+      float zoom = 1 ;
 
-      bool isPSizeCanBeDecreased() const { return this->p_size_min <= this->p_size ; }
-      bool isPSizeCanBeIncreased() const { return this->p_size < this->p_size_max ; }
+      int grid_width() const { return int( float(W_WIDTH) / float(this->current_p_size) ) + 1 ; }
+      int grid_height() const { return int( float(W_HEIGHT) / float(this->current_p_size) ) + 1 ; }
 
-      int window_width() const { return int( float(W_WIDTH) / float(this->p_size) ) + 1 ; }
-      int window_height() const { return int( float(W_HEIGHT) / float(this->p_size) ) + 1 ; }
-
-      float delay = 50 ;
+      float delay = 100 ;
     } window ;
 
     // Set of all alive cells

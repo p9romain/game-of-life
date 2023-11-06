@@ -1,6 +1,8 @@
+#include <SDL2/SDL_events.h>
 #include <optional>
 #include <iostream>
 #include <unordered_set>
+#include <cmath>
 #include <SDL2/SDL.h>
 
 #include "params.hpp"
@@ -16,9 +18,9 @@
  */
 void drawPixels( SDL_Renderer* rd, const Game& g)
 {
-  for ( int i = g.origin.x ; i < g.origin.x + g.window.window_height() ; i++ )
+  for ( int i = g.origin.x ; i < g.origin.x + g.window.grid_height() + 1 ; i++ )
   {
-    for ( int j = g.origin.y ; j < g.origin.y + g.window.window_width() ; j++ )
+    for ( int j = g.origin.y ; j < g.origin.y + g.window.grid_width() + 1 ; j++ )
     {
       // Cell alive
       if ( g.alive_set.contains( {(int) i, (int) j} ) )
@@ -26,9 +28,11 @@ void drawPixels( SDL_Renderer* rd, const Game& g)
         SDL_SetRenderDrawColor(rd, g.window.c_pixel.R, g.window.c_pixel.G, g.window.c_pixel.B, 255) ;
       }
       // Grid
-      else if ( g.window.display_grid and
-          (    ( abs(i) + abs(j) )%2 == ( abs(g.origin.x) + abs(g.origin.y) )%2 
-            or ( abs(i) - abs(j) )%2 == ( abs(g.origin.x) - abs(g.origin.y) )%2
+      else if ( g.window.display_grid   
+          and g.window.zoom >= 0.5        // if too zoomed : disable grid
+          and
+          (    ( abs(i) + abs(j) )%2 == 0
+            or ( abs(i) - abs(j) )%2 == 0
           )
         )
       {
@@ -38,20 +42,20 @@ void drawPixels( SDL_Renderer* rd, const Game& g)
       {
         SDL_SetRenderDrawColor(rd, g.window.c_grid1.R, g.window.c_grid1.G, g.window.c_grid1.B, 255) ;
       }
-      SDL_Rect rect = { int( j - g.origin.y - 1)*g.window.p_size, 
-                        int( i - g.origin.x - 1 )*g.window.p_size, 
-                        g.window.p_size, g.window.p_size } ;
+      SDL_Rect rect = { int( j - g.origin.y - 1 ) * g.window.current_p_size, 
+                        int( i - g.origin.x - 1 ) * g.window.current_p_size, 
+                        g.window.current_p_size, g.window.current_p_size } ;
       SDL_RenderFillRect(rd, &rect) ;
     }
   }
 
   // Eraser
-  if ( g.mouse.hold and not g.mouse.button )
+  if ( g.mouse.hold and ( (g.mouse.button and g.mouse.cell_type) or not g.mouse.button ) )
   {
     SDL_SetRenderDrawColor(rd, 255, 0, 0, 255) ;
-    SDL_Rect rect = { int( g.mouse_pos.y - g.origin.y - 2)*g.window.p_size, 
-                      int( g.mouse_pos.x - g.origin.x - 2 )*g.window.p_size, 
-                      3*g.window.p_size, 3*g.window.p_size } ;
+    SDL_Rect rect = { int( g.mouse_pos.y - g.origin.y - 2 ) * g.window.current_p_size, 
+                      int( g.mouse_pos.x - g.origin.x - 2 ) * g.window.current_p_size, 
+                      3*g.window.current_p_size, 3*g.window.current_p_size } ;
     SDL_RenderDrawRect(rd, &rect) ;
   }
 }
@@ -126,6 +130,14 @@ void updateConway( Game& g )
   }
 }
 
+/**
+ * @fn void keyListener( Game& g )
+ * description
+ * 
+ * @param[inout] g, the GAME !!
+ *
+ * @return void
+ */
 void keyListener( Game& g )
 {
   SDL_Event evt ;
@@ -167,25 +179,25 @@ void keyListener( Game& g )
           case SDLK_z :
           case SDLK_UP :
           {
-            g.move.hold_up = true ;
+            g.window.move.hold_up = true ;
             break ; 
           }
           case SDLK_q :
           case SDLK_LEFT :
           {
-            g.move.hold_left = true ;
+            g.window.move.hold_left = true ;
             break ; 
           }
           case SDLK_s :
           case SDLK_DOWN :
           {
-            g.move.hold_down = true ;
+            g.window.move.hold_down = true ;
             break ; 
           }
           case SDLK_d :
           case SDLK_RIGHT :
           {
-            g.move.hold_right = true ;
+            g.window.move.hold_right = true ;
             break ; 
           }
           case SDLK_c :
@@ -202,25 +214,25 @@ void keyListener( Game& g )
           case SDLK_z :
           case SDLK_UP :
           {
-            g.move.hold_up = false ;
+            g.window.move.hold_up = false ;
             break ; 
           }
           case SDLK_q :
           case SDLK_LEFT :
           {
-            g.move.hold_left = false ;
+            g.window.move.hold_left = false ;
             break ; 
           }
           case SDLK_s :
           case SDLK_DOWN :
           {
-            g.move.hold_down = false ;
+            g.window.move.hold_down = false ;
             break ; 
           }
           case SDLK_d :
           case SDLK_RIGHT :
           {
-            g.move.hold_right = false ;
+            g.window.move.hold_right = false ;
             break ; 
           }
         }
@@ -228,9 +240,29 @@ void keyListener( Game& g )
       }
       case SDL_MOUSEBUTTONDOWN :
       {
+        g.updateMousePos() ;
+
         g.mouse.hold = true ;
-        g.mouse.button = ( evt.button.button == SDL_BUTTON_LEFT ) ;
         g.mouse.cell_type = g.alive_set.contains( {g.mouse_pos.x, g.mouse_pos.y} ) ;
+
+        switch ( evt.button.button )
+        {
+          case SDL_BUTTON_MIDDLE :
+          {
+            g.window.zoom = 1 ;
+            break ;
+          }
+          case SDL_BUTTON_LEFT :
+          {
+            g.mouse.button = true ;
+            break ;
+          }
+          case SDL_BUTTON_RIGHT :
+          {
+            g.mouse.button = false ;
+            break ;
+          }
+        }
         break ;
       }
       case SDL_MOUSEBUTTONUP :
@@ -238,6 +270,20 @@ void keyListener( Game& g )
         g.mouse.hold = false ;
 
         g.old_mouse_pos.reset() ;
+        break ;
+      }
+      case SDL_MOUSEWHEEL :
+      {
+        // Scroll up (zoom)
+        if ( evt.wheel.y > 0 and g.window.zoom <= g.window.zoom_max )
+        {
+          g.window.zoom += 0.01 ;
+        }
+        // Scroll down (dezoom)
+        else if ( evt.wheel.y < 0 and g.window.zoom_min <= g.window.zoom )
+        {
+          g.window.zoom -= 0.01 ;
+        }
         break ;
       }
       default :
@@ -248,8 +294,19 @@ void keyListener( Game& g )
   }
 }
 
+/**
+ * @fn void refresh( Game& g )
+ * description
+ * 
+ * @param[inout] g, the GAME !!
+ *
+ * @return void
+ */
 void refresh( Game& g )
 {
+  // Zoom manager
+  g.window.current_p_size = g.window.zoom * g.window.p_size ; 
+
   // Pen manager
   if ( not g.start and g.mouse.hold )
   {
@@ -266,7 +323,7 @@ void refresh( Game& g )
       // Draw if left-click and cell dead
       if ( g.mouse.button and not g.mouse.cell_type ) g.alive_set.insert( g.mouse_pos ) ;
       // Erase if left-click and cell live, or if right-click
-      else if ( (g.mouse.button and not g.mouse.cell_type) or not g.mouse.button )
+      else if ( (g.mouse.button and g.mouse.cell_type) or not g.mouse.button )
       {
         for ( int i = g.mouse_pos.x-1 ; i < g.mouse_pos.x+2 ; i++ )
         {
@@ -283,17 +340,31 @@ void refresh( Game& g )
   }
 
   // Change the grid displayed
-  if ( g.move.hold_up != g.move.hold_down )
+  if ( g.window.move.hold_up != g.window.move.hold_down )
   {
-    if ( g.move.hold_up ) g.origin.x-- ;
-    if ( g.move.hold_down ) g.origin.x++ ;
+    if ( g.window.move.hold_up ) g.origin.x-- ;
+    if ( g.window.move.hold_down ) g.origin.x++ ;
   }
-  if ( g.move.hold_left != g.move.hold_right )
+  if ( g.window.move.hold_left != g.window.move.hold_right )
   {
-    if ( g.move.hold_left ) g.origin.y-- ;
-    if ( g.move.hold_right ) g.origin.y++ ;
+    if ( g.window.move.hold_left ) g.origin.y-- ;
+    if ( g.window.move.hold_right ) g.origin.y++ ;
   }
 }
+
+
+
+
+
+
+
+
+//=================================================================================================
+//
+//                                              Main                                              
+//
+//=================================================================================================
+
 
 int main(int argc, char **argv)
 {
@@ -322,12 +393,9 @@ int main(int argc, char **argv)
     if ( g->start )
     {
       updateConway(*g) ;
-      SDL_Delay((g->window).delay) ;
     }
-    else
-    {
-      SDL_Delay(25) ;
-    }
+
+    SDL_Delay(35) ;
 
     SDL_RenderPresent(rd) ;
   }
