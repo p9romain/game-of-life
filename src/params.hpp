@@ -8,34 +8,6 @@
   // Windows size
   #define W_WIDTH 1080
   #define W_HEIGHT 720
-  #define RATIO float(W_WIDTH)/float(W_HEIGHT)
-
-  // Size of "inifite" grid (6 times a grid)
-  #define SIZE 6
-  // Pixel size
-  #define P_SIZE_MIN 4
-  extern int P_SIZE ;
-  // Grid size on windows
-  extern int W_GRID_W ;
-  extern int W_GRID_H ;
-
-  // Delay between screen update
-  extern float DELAY ;
-
-  // Color of pixel 1
-  extern int GRID_COLOR1_R ;
-  extern int GRID_COLOR1_G ;
-  extern int GRID_COLOR1_B ;
-
-  // Color of pixel 2
-  extern int GRID_COLOR2_R ;
-  extern int GRID_COLOR2_G ;
-  extern int GRID_COLOR2_B ;
-
-  // Color of alive cell
-  extern int P_COLOR_R ;
-  extern int P_COLOR_G ;
-  extern int P_COLOR_B ;
 
   // A point
   struct Coord
@@ -52,6 +24,11 @@
     {
       return std::hash<size_t>()( (size_t) c.x | ((size_t) c.y << 32) ) ;
     }
+  } ;
+
+  struct Color
+  {
+    int R, G, B ;
   } ;
 
   // All the needed information to make the game
@@ -74,7 +51,7 @@
     } mouse ;
 
     // To manage camera (grid part which is drawn)
-    struct Move
+    struct Camera
     {
       bool hold_up = false ;
       bool hold_down = false ;
@@ -82,12 +59,34 @@
       bool hold_right = false ;
     } move ;
 
+    struct Display
+    {
+      Color c_grid1 = { 255, 255, 255 } ;
+      Color c_grid2 = { 240, 240, 240 } ;
+      bool display_grid = true ;
+      Color c_pixel = { 0, 0, 0 } ;
+
+      static const int p_size_min = 4 ;
+      static const int p_size_max = 50 ;
+      int p_size = 15 ;
+
+      bool isPSizeCanBeDecreased() const { return this->p_size_min <= this->p_size ; }
+      bool isPSizeCanBeIncreased() const { return this->p_size < this->p_size_max ; }
+
+      int window_width() const { return int( float(W_WIDTH) / float(this->p_size) ) + 1 ; }
+      int window_height() const { return int( float(W_HEIGHT) / float(this->p_size) ) + 1 ; }
+
+      float delay = 50 ;
+    } window ;
+
     // Set of all alive cells
     std::unordered_set<Coord> alive_set ;
 
     // Booleans for pausing the game or quiting
     bool start = false ;
     bool quit = false ;
+
+    void updateMousePos() ;
   } ;
 
 #endif // PARAMS_HPP

@@ -1,4 +1,3 @@
-#include <SDL2/SDL_keycode.h>
 #include <optional>
 #include <iostream>
 #include <unordered_set>
@@ -17,28 +16,31 @@
  */
 void drawPixels( SDL_Renderer* rd, const Game& g)
 {
-  for ( int i = g.origin.x ; i < g.origin.x + W_GRID_H ; i++ )
+  for ( int i = g.origin.x ; i < g.origin.x + g.window.window_height() ; i++ )
   {
-    for ( int j = g.origin.y ; j < g.origin.y + W_GRID_W ; j++ )
+    for ( int j = g.origin.y ; j < g.origin.y + g.window.window_width() ; j++ )
     {
       // Cell alive
       if ( g.alive_set.contains( {(int) i, (int) j} ) )
       {
-        SDL_SetRenderDrawColor(rd, P_COLOR_R, P_COLOR_G, P_COLOR_B, 255) ;
+        SDL_SetRenderDrawColor(rd, g.window.c_pixel.R, g.window.c_pixel.G, g.window.c_pixel.B, 255) ;
       }
       // Grid
-      else if ( 
-             ( abs(i) + abs(j) )%2 == ( abs(g.origin.x) + abs(g.origin.y) )%2 
-          or ( abs(i) - abs(j) )%2 == ( abs(g.origin.x) - abs(g.origin.y) )%2
+      else if ( g.window.display_grid and
+          (    ( abs(i) + abs(j) )%2 == ( abs(g.origin.x) + abs(g.origin.y) )%2 
+            or ( abs(i) - abs(j) )%2 == ( abs(g.origin.x) - abs(g.origin.y) )%2
+          )
         )
       {
-        SDL_SetRenderDrawColor(rd, GRID_COLOR2_R, GRID_COLOR2_G, GRID_COLOR2_B, 255) ;
+        SDL_SetRenderDrawColor(rd, g.window.c_grid2.R, g.window.c_grid2.G, g.window.c_grid2.B, 255) ;
       }
       else
       {
-        SDL_SetRenderDrawColor(rd, GRID_COLOR1_R, GRID_COLOR1_R, GRID_COLOR1_R, 255) ;
+        SDL_SetRenderDrawColor(rd, g.window.c_grid1.R, g.window.c_grid1.G, g.window.c_grid1.B, 255) ;
       }
-      SDL_Rect rect = { int( j - g.origin.y - 1)*P_SIZE, int( i - g.origin.x - 1 )*P_SIZE, P_SIZE, P_SIZE } ;
+      SDL_Rect rect = { int( j - g.origin.y - 1)*g.window.p_size, 
+                        int( i - g.origin.x - 1 )*g.window.p_size, 
+                        g.window.p_size, g.window.p_size } ;
       SDL_RenderFillRect(rd, &rect) ;
     }
   }
@@ -47,7 +49,9 @@ void drawPixels( SDL_Renderer* rd, const Game& g)
   if ( g.mouse.hold and not g.mouse.button )
   {
     SDL_SetRenderDrawColor(rd, 255, 0, 0, 255) ;
-    SDL_Rect rect = { int( g.mouse_pos.y - g.origin.y - 2)*P_SIZE, int( g.mouse_pos.x - g.origin.x - 2 )*P_SIZE, 3*P_SIZE, 3*P_SIZE } ;
+    SDL_Rect rect = { int( g.mouse_pos.y - g.origin.y - 2)*g.window.p_size, 
+                      int( g.mouse_pos.x - g.origin.x - 2 )*g.window.p_size, 
+                      3*g.window.p_size, 3*g.window.p_size } ;
     SDL_RenderDrawRect(rd, &rect) ;
   }
 }
@@ -103,7 +107,7 @@ void updateConway( Game& g )
       }
     }
 
-    // The new set of alive celles
+    // The new set of alive cells
     std::unordered_set<Coord> new_alive_set ;
 
     // Check birth or death
@@ -122,7 +126,6 @@ void updateConway( Game& g )
   }
 }
 
-// TODO
 void keyListener( Game& g )
 {
   SDL_Event evt ;
@@ -185,6 +188,10 @@ void keyListener( Game& g )
             g.move.hold_right = true ;
             break ; 
           }
+          case SDLK_c :
+          {
+            g.window.display_grid = not g.window.display_grid ;
+          }
         }
         break ;
       }
@@ -230,7 +237,7 @@ void keyListener( Game& g )
       {
         g.mouse.hold = false ;
 
-        g.old_mouse_pos = std::nullopt ;
+        g.old_mouse_pos.reset() ;
         break ;
       }
       default :
@@ -246,12 +253,15 @@ void refresh( Game& g )
   // Pen manager
   if ( not g.start and g.mouse.hold )
   {
-    int x, y ;
-    SDL_GetMouseState(&x, &y) ;
-    g.mouse_pos.x = int(g.origin.x + y/float(P_SIZE)) + 1 ;
-    g.mouse_pos.y = int(g.origin.y + x/float(P_SIZE)) + 1 ;
+    g.updateMousePos() ;
 
-    if ( (not g.old_mouse_pos.has_value()) or g.mouse_pos.x != g.old_mouse_pos.value().x or g.mouse_pos.y != g.old_mouse_pos.value().y ) 
+    if ( 
+        not g.old_mouse_pos.has_value()                         // first time we click
+         or not (                                               // not the same pixel
+            g.mouse_pos.x == g.old_mouse_pos.value().x    
+            and g.mouse_pos.y == g.old_mouse_pos.value().y
+          )  
+        ) 
     {
       // Draw if left-click and cell dead
       if ( g.mouse.button and not g.mouse.cell_type ) g.alive_set.insert( g.mouse_pos ) ;
@@ -268,8 +278,8 @@ void refresh( Game& g )
       }
     }
 
-    // Keep the old_position to not redo again
-    *g.old_mouse_pos = g.mouse_pos ;
+    // Replace the old_position to not redo again on the same pixel
+    g.old_mouse_pos.emplace(g.mouse_pos) ;
   }
 
   // Change the grid displayed
@@ -293,9 +303,6 @@ int main(int argc, char **argv)
   SDL_Window* wnd = SDL_CreateWindow("Game of Life", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, W_WIDTH, W_HEIGHT, SDL_WINDOW_SHOWN) ;
   SDL_Renderer* rd = SDL_CreateRenderer(wnd, -1, 0) ;
 
-  // Init pixel size
-  P_SIZE *= 4 ;
-
   // The GAME !!
   Game* g = new Game() ;
 
@@ -315,7 +322,7 @@ int main(int argc, char **argv)
     if ( g->start )
     {
       updateConway(*g) ;
-      SDL_Delay(DELAY) ;
+      SDL_Delay((g->window).delay) ;
     }
     else
     {
