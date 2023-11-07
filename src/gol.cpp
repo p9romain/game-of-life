@@ -302,7 +302,7 @@ void keyListener( Game& g )
 void refresh( Game& g )
 {
   // Zoom manager
-  g.window.current_p_size = std::exp(g.window.zoom - 1) * g.window.p_size ;
+  g.window.current_p_size = 0.75 * std::exp(g.window.zoom - 1) * g.window.p_size ;
 
   // Pen manager
   if ( not g.start and g.mouse.hold )
@@ -339,13 +339,13 @@ void refresh( Game& g )
   // Change the grid displayed
   if ( g.window.move.hold_up != g.window.move.hold_down )
   {
-    if ( g.window.move.hold_up ) g.origin.x-- ;
-    if ( g.window.move.hold_down ) g.origin.x++ ;
+    if ( g.window.move.hold_up ) g.origin.y-- ;
+    if ( g.window.move.hold_down ) g.origin.y++ ;
   }
   if ( g.window.move.hold_left != g.window.move.hold_right )
   {
-    if ( g.window.move.hold_left ) g.origin.y-- ;
-    if ( g.window.move.hold_right ) g.origin.y++ ;
+    if ( g.window.move.hold_left ) g.origin.x-- ;
+    if ( g.window.move.hold_right ) g.origin.x++ ;
   }
 }
 

@@ -74,7 +74,7 @@
       int current_p_size = p_size ;
 
       const float zoom_min = 0.01 ;
-      const float zoom_max = 3 ;
+      const float zoom_max = 10 ;
       float zoom = 1 ;
 
       int grid_width() const { return int( float(W_WIDTH) / float(this->current_p_size) ) + 1 ; }
@@ -88,7 +88,7 @@
     bool start = false ;
     bool quit = false ;
 
-    int update_interval = 1 ;
+    int update_interval = 250 ;
 
     void updateMousePos() ;
   } ;
