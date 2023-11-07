@@ -1,5 +1,4 @@
 #include <optional>
-#include <iostream>
 #include <unordered_set>
 #include <SDL2/SDL.h>
 
