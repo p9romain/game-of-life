@@ -4,7 +4,6 @@
   #include <functional>
   #include <optional>
   #include <unordered_set>
-  #include <cmath>
 
   // Windows size
   #define W_WIDTH 1080
@@ -35,8 +34,9 @@
   // All the needed information to make the game
   struct Game 
   {
-    // Grid indexes of the top-left pixel
+    // Grid indexes of the center pixel
     Coord origin = { 0, 0 } ;
+
     // Old indexes of the mouse on screen (need for holding)
     // Optional : the old position, std::nullopt if not holding
     std::optional<Coord> old_mouse_pos = std::nullopt ;
@@ -47,7 +47,7 @@
     struct Mouse
     {
       bool hold = false ;
-      bool button = false ; // true = left, false = right
+      bool button = true ; // true = left, false = right
       bool cell_type = false ;
     } mouse ;
 

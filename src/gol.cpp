@@ -1,10 +1,6 @@
-#include <SDL2/SDL_events.h>
-#include <SDL2/SDL_timer.h>
-#include <cstdint>
 #include <optional>
 #include <iostream>
 #include <unordered_set>
-#include <cmath>
 #include <SDL2/SDL.h>
 
 #include "params.hpp"
@@ -20,9 +16,10 @@
  */
 void drawPixels( SDL_Renderer* rd, const Game& g)
 {
-  for ( int i = g.origin.x - g.window.grid_height() / 2 ; i < g.origin.x + 3/2 * g.window.grid_height() + 1 ; i++ )
+  // Drawing window
+  for ( int i = g.origin.x - 0.5 * g.window.grid_width() ; i < g.origin.x + 0.5 * g.window.grid_width() + 1 ; i++ )
   {
-    for ( int j = g.origin.y - g.window.grid_width() / 2 ; j < g.origin.y + 3/2 * g.window.grid_width() + 1 ; j++ )
+    for ( int j = g.origin.y - 0.5 * g.window.grid_height() ; j < g.origin.y + 0.5 * g.window.grid_height() + 1 ; j++ )
     {
       // Cell alive
       if ( g.alive_set.contains( {i, j} ) )
@@ -43,8 +40,8 @@ void drawPixels( SDL_Renderer* rd, const Game& g)
       {
         SDL_SetRenderDrawColor(rd, g.window.c_grid1.R, g.window.c_grid1.G, g.window.c_grid1.B, 255) ;
       }
-      SDL_Rect rect = { int( j + g.window.grid_width() / 2 - g.origin.y - 1 ) * g.window.current_p_size, 
-                        int( i + g.window.grid_height() / 2 - g.origin.x - 1 ) * g.window.current_p_size, 
+      SDL_Rect rect = { ( i - g.origin.x + int( 0.5 * g.window.grid_width() ) ) * g.window.current_p_size, 
+                        ( j - g.origin.y + int( 0.5 * g.window.grid_height() ) ) * g.window.current_p_size, 
                         g.window.current_p_size, g.window.current_p_size } ;
       SDL_RenderFillRect(rd, &rect) ;
     }
@@ -54,8 +51,8 @@ void drawPixels( SDL_Renderer* rd, const Game& g)
   if ( g.mouse.hold and ( (g.mouse.button and g.mouse.cell_type) or not g.mouse.button ) )
   {
     SDL_SetRenderDrawColor(rd, 255, 0, 0, 255) ;
-    SDL_Rect rect = { int( g.mouse_pos.y + g.window.grid_width() / 2 - g.origin.y - 2 ) * g.window.current_p_size, 
-                      int( g.mouse_pos.x + g.window.grid_height() / 2 - g.origin.x - 2 ) * g.window.current_p_size, 
+    SDL_Rect rect = { ( g.mouse_pos.x - g.origin.x + int( 0.5 * g.window.grid_width() ) - 1 ) * g.window.current_p_size, 
+                      ( g.mouse_pos.y - g.origin.y + int( 0.5 * g.window.grid_height() ) - 1 ) * g.window.current_p_size, 
                       3*g.window.current_p_size, 3*g.window.current_p_size } ;
     SDL_RenderDrawRect(rd, &rect) ;
   }
