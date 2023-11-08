@@ -16,9 +16,9 @@
 void drawPixels( SDL_Renderer* rd, const Game& g)
 {
   // Drawing window
-  for ( int i = g.origin.x - 0.5 * g.window.grid_width() ; i < g.origin.x + 0.5 * g.window.grid_width() + 1 ; i++ )
+  for ( int i = g.origin.x - 0.5 * g.window.grid_width() - 1 ; i < g.origin.x + 0.5 * g.window.grid_width() + 1 ; i++ )
   {
-    for ( int j = g.origin.y - 0.5 * g.window.grid_height() ; j < g.origin.y + 0.5 * g.window.grid_height() + 1 ; j++ )
+    for ( int j = g.origin.y - 0.5 * g.window.grid_height() - 1 ; j < g.origin.y + 0.5 * g.window.grid_height() + 1 ; j++ )
     {
       // Cell alive
       if ( g.alive_set.contains( {i, j} ) )
@@ -28,8 +28,8 @@ void drawPixels( SDL_Renderer* rd, const Game& g)
       // Grid
       else if ( g.window.display_grid
           and
-          (    ( abs(i) + abs(j) )%2 == 0
-            or ( abs(i) - abs(j) )%2 == 0
+          (    ( abs( int(i - 0.5 * g.window.grid_width()) ) + abs( int(j - 0.5 * g.window.grid_height()) ) )%2 == 0
+            or ( abs( int(i - 0.5 * g.window.grid_width()) ) - abs( int(j - 0.5 * g.window.grid_height()) ) )%2 == 0
           )
         )
       {
@@ -39,8 +39,12 @@ void drawPixels( SDL_Renderer* rd, const Game& g)
       {
         SDL_SetRenderDrawColor(rd, g.window.c_grid1.R, g.window.c_grid1.G, g.window.c_grid1.B, 255) ;
       }
-      SDL_Rect rect = { ( i - g.origin.x + int( 0.5 * g.window.grid_width() ) ) * g.window.current_p_size, 
-                        ( j - g.origin.y + int( 0.5 * g.window.grid_height() ) ) * g.window.current_p_size, 
+      SDL_Rect rect = { ( i - g.origin.x 
+                            + int( 0.5 * g.window.grid_width() )
+                          ) * g.window.current_p_size, 
+                        ( j - g.origin.y 
+                            + int( 0.5 * g.window.grid_height() ) 
+                          ) * g.window.current_p_size, 
                         g.window.current_p_size, g.window.current_p_size } ;
       SDL_RenderFillRect(rd, &rect) ;
     }
@@ -50,8 +54,12 @@ void drawPixels( SDL_Renderer* rd, const Game& g)
   if ( g.mouse.hold and ( (g.mouse.button and g.mouse.cell_type) or not g.mouse.button ) )
   {
     SDL_SetRenderDrawColor(rd, 255, 0, 0, 255) ;
-    SDL_Rect rect = { ( g.mouse_pos.x - g.origin.x + int( 0.5 * g.window.grid_width() ) - 1 ) * g.window.current_p_size, 
-                      ( g.mouse_pos.y - g.origin.y + int( 0.5 * g.window.grid_height() ) - 1 ) * g.window.current_p_size, 
+    SDL_Rect rect = { ( g.mouse_pos.x - g.origin.x 
+                                      + int( 0.5 * g.window.grid_width() ) - 1 
+                          ) * g.window.current_p_size, 
+                      ( g.mouse_pos.y - g.origin.y 
+                                      + int( 0.5 * g.window.grid_height() ) - 1 
+                          ) * g.window.current_p_size, 
                       3*g.window.current_p_size, 3*g.window.current_p_size } ;
     SDL_RenderDrawRect(rd, &rect) ;
   }
@@ -302,7 +310,7 @@ void keyListener( Game& g )
 void refresh( Game& g )
 {
   // Zoom manager
-  g.window.current_p_size = 0.75 * std::exp(g.window.zoom - 1) * g.window.p_size ;
+  g.window.current_p_size = 0.60 * std::exp(g.window.zoom - 1) * g.window.p_size ;
 
   // Pen manager
   if ( not g.start and g.mouse.hold )
@@ -365,15 +373,15 @@ void refresh( Game& g )
 
 int main(int argc, char **argv)
 {
-  // Init SDL windows
-  SDL_Init(SDL_INIT_VIDEO) ;
-
-  SDL_Window* wnd = SDL_CreateWindow("Game of Life", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, W_WIDTH, W_HEIGHT, SDL_WINDOW_SHOWN) ;
-  SDL_Renderer* rd = SDL_CreateRenderer(wnd, -1, 0) ;
-
   // The GAME !!
   Game* g = new Game() ;
   unsigned int old_tick = SDL_GetTicks() / g->update_interval + 1 ;
+
+  // Init SDL windows
+  SDL_Init(SDL_INIT_VIDEO) ;
+
+  SDL_Window* wnd = SDL_CreateWindow("Game of Life", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, g->window.width, g->window.height, SDL_WINDOW_SHOWN) ;
+  SDL_Renderer* rd = SDL_CreateRenderer(wnd, -1, 0) ;
 
   while ( not g->quit )
   {

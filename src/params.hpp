@@ -5,10 +5,6 @@
   #include <optional>
   #include <unordered_set>
 
-  // Windows size
-  #define W_WIDTH 1080
-  #define W_HEIGHT 720
-
   // A point
   struct Coord
   {
@@ -65,20 +61,27 @@
         float offset = 0.5 ;
       } move ;
 
+      // Grid
       bool display_grid = true ;
       Color c_grid1 = { 255, 255, 255 } ;
       Color c_grid2 = { 240, 240, 240 } ;
       Color c_pixel = { 0, 0, 0 } ;
 
+      // Winodws size
+      int width = 1080 ;
+      int height = 720 ;
+
+      // Pixel size
       const int p_size = 15 ;
       int current_p_size = p_size ;
 
+      // Zoom
       const float zoom_min = 0.01 ;
-      const float zoom_max = 10 ;
+      const float zoom_max = 4 ;
       float zoom = 1 ;
 
-      int grid_width() const { return int( float(W_WIDTH) / float(this->current_p_size) ) + 1 ; }
-      int grid_height() const { return int( float(W_HEIGHT) / float(this->current_p_size) ) + 1 ; }
+      int grid_width() const { return int( float(this->width) / float(this->current_p_size) ) + 1 ; }
+      int grid_height() const { return int( float(this->height) / float(this->current_p_size) ) + 1 ; }
     } window ;
 
     // Set of all alive cells
@@ -88,7 +91,7 @@
     bool start = false ;
     bool quit = false ;
 
-    int update_interval = 250 ;
+    int update_interval = 50 ;
 
     void updateMousePos() ;
   } ;
